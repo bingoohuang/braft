@@ -1,6 +1,6 @@
 An easy to use customizable library to make your Go application Distributed, Highly available, Fault Tolerant etc...
 using Hashicorp's [Raft](https://github.com/hashicorp/raft) library which implements the
-[Raft Consensus Algorithm](https://raft.github.io/).
+[Raft Consensus Algorithm](https://raft.github.io/). Original fork from [ksrichard/easyraf](https://github.com/ksrichard/easyraft)
 
 Features
 ---
@@ -61,10 +61,6 @@ func main() {
 }
 ```
 
-Examples
----
-Examples can be found in the [examples](https://github.com/bingoohuang/easyraft/tree/main/examples/) directory
-
 Build
 ---
 To regenerate gRPC code and install dependencies simply run `make install`
@@ -77,6 +73,3 @@ TODO
 - [ ] Secure communication between nodes (SSL/TLS)
 - [ ] Backup/Restore backup handling
 - [ ] Allow configuration option to pass any custom raft.FSM
-
-
-
