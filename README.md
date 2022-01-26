@@ -1,7 +1,3 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/bingoohuang/easyraft)](https://goreportcard.com/report/github.com/bingoohuang/easyraft)
-[![Go Reference](https://pkg.go.dev/badge/github.com/bingoohuang/easyraft.svg)](https://pkg.go.dev/github.com/bingoohuang/easyraft)
-[![GitHub go.mod Go version of a Go module](https://img.shields.io/github/go-mod/go-version/bingoohuang/easyraft.svg)](https://github.com/bingoohuang/easyraft)
-
 An easy to use customizable library to make your Go application Distributed, Highly available, Fault Tolerant etc...
 using Hashicorp's [Raft](https://github.com/hashicorp/raft) library which implements the
 [Raft Consensus Algorithm](https://raft.github.io/).
