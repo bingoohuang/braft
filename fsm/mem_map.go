@@ -26,7 +26,7 @@ type MemMapService struct {
 	Maps map[string]*Map
 }
 
-func NewMemMapService() FSMService {
+func NewMemMapService() *MemMapService {
 	return &MemMapService{Maps: map[string]*Map{}}
 }
 
@@ -46,10 +46,10 @@ func (m *MemMapService) NewLog(request map[string]interface{}) interface{} {
 	if err := mapstructure.Decode(request, &req); err != nil {
 		return err
 	}
-	return m.exec(req)
+	return m.Exec(req)
 }
 
-func (m *MemMapService) exec(req MapRequest) interface{} {
+func (m *MemMapService) Exec(req MapRequest) interface{} {
 	m.Lock()
 	defer m.Unlock()
 

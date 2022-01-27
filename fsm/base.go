@@ -11,13 +11,13 @@ import (
 )
 
 type RoutingFSM struct {
-	services     map[string]FSMService
+	services     map[string]Service
 	ser          serializer.Serializer
 	reqDataTypes []ReqTypeInfo
 }
 
-func NewRoutingFSM(services []FSMService) FSM {
-	servicesMap := map[string]FSMService{}
+func NewRoutingFSM(services []Service) FSM {
+	servicesMap := map[string]Service{}
 	for _, service := range services {
 		servicesMap[service.Name()] = service
 	}

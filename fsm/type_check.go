@@ -6,11 +6,11 @@ import (
 )
 
 type ReqTypeInfo struct {
-	Service   FSMService
+	Service   Service
 	ReqFields []string
 }
 
-func MakeReqTypeInfo(service FSMService) ReqTypeInfo {
+func MakeReqTypeInfo(service Service) ReqTypeInfo {
 	// get current type fields list
 	t := reflect.TypeOf(service.GetReqDataType())
 

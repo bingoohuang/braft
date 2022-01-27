@@ -14,8 +14,8 @@ type FSM interface {
 	Init(ser serializer.Serializer)
 }
 
-// FSMService interface makes it easier to build State Machines
-type FSMService interface {
+// Service interface makes it easier to build State Machines
+type Service interface {
 	// Name returns the unique ID/Name which will identify the FSM Service when it comes to routing incoming messages
 	Name() string
 

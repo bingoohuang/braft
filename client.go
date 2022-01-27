@@ -13,8 +13,8 @@ import (
 )
 
 // ApplyOnLeader apply a payload on the leader node.
-func (node *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
-	addr := string(node.Raft.Leader())
+func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
+	addr := string(n.Raft.Leader())
 	if addr == "" {
 		return nil, errors.New("unknown leader")
 	}
@@ -31,7 +31,7 @@ func (node *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 		return nil, err
 	}
 
-	result, err := node.conf.Serializer.Deserialize(response.Response)
+	result, err := n.conf.Serializer.Deserialize(response.Response)
 	if err != nil {
 		return nil, err
 	}
@@ -41,18 +41,14 @@ func (node *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 
 // GetPeerDetails returns the remote peer details.
 func GetPeerDetails(address string) (*grpc.GetDetailsResponse, error) {
-	addr, port := util.Cut(string(address), ":")
-	switch addr {
-	case HostZero:
-		address = "127.0.0.1:" + port
-	}
-	conn, err := ggrpc.Dial(address, ggrpc.WithInsecure(), ggrpc.WithBlock(), ggrpc.EmptyDialOption{})
+	address = strings.Replace(address, HostZero, "127.0.0.1", 1)
+	c, err := ggrpc.Dial(address, ggrpc.WithInsecure(), ggrpc.WithBlock(), ggrpc.EmptyDialOption{})
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer c.Close()
 
-	response, err := grpc.NewRaftClient(conn).GetDetails(context.Background(), &grpc.GetDetailsRequest{})
+	response, err := grpc.NewRaftClient(c).GetDetails(context.Background(), &grpc.GetDetailsRequest{})
 	if err != nil {
 		return nil, err
 	}

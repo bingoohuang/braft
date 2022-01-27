@@ -16,9 +16,10 @@ import (
 )
 
 func main() {
-	log.Printf("Starting, rport:%d, p:%d, hport:%d, discovery:%s",
+	log.Printf("Starting, rport:%d, dport:%d, hport:%d, discovery:%s",
 		braft.EnvRport, braft.EnvDport, braft.EnvHport, braft.EnvDiscoveryMethod.Name())
-	node, err := braft.NewNode(braft.WithServices(fsm.NewMemMapService()))
+	fsmService := fsm.NewMemMapService()
+	node, err := braft.NewNode(braft.WithServices(fsmService))
 	if err != nil {
 		log.Fatalf("failed to new node, error: %v", err)
 	}
@@ -28,7 +29,7 @@ func main() {
 	}
 	defer node.Stop()
 
-	go startHTTP(node, braft.EnvHport)
+	go startHTTP(node, braft.EnvHport, fsmService)
 
 	// wait for interruption/termination
 	sigs := make(chan os.Signal, 1)
@@ -38,7 +39,7 @@ func main() {
 	<-stoppedCh
 }
 
-func startHTTP(node *braft.Node, httpPort int) {
+func startHTTP(node *braft.Node, httpPort int, fsmService *fsm.MemMapService) {
 	serveRaft := func(ctx *gin.Context) {
 		var nodes []RaftNode
 		for _, server := range node.Raft.GetConfiguration().Configuration().Servers {
@@ -69,6 +70,8 @@ func startHTTP(node *braft.Node, httpPort int) {
 			req.Value = getQuery(ctx, "value", "v")
 		case http.MethodGet:
 			req.Operate = fsm.OperateGet
+			ctx.JSON(http.StatusOK, fsmService.Exec(req))
+			return
 		case http.MethodDelete:
 			req.Operate = fsm.OperateDel
 		}

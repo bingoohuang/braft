@@ -48,14 +48,14 @@ type NodeConfig struct {
 	Serializer      serializer.Serializer
 	DataDir         string
 	DiscoveryMethod discovery.Method
-	Services        []fsm.FSMService
+	Services        []fsm.Service
 }
 
 // NodeConfigFn is the function option pattern for the NodeConfig.
 type NodeConfigFn func(*NodeConfig)
 
 // WithServices specifies the services for the FSM.
-func WithServices(s ...fsm.FSMService) NodeConfigFn {
+func WithServices(s ...fsm.Service) NodeConfigFn {
 	return func(c *NodeConfig) {
 		c.Services = s
 	}
