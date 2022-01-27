@@ -61,7 +61,7 @@ const HostZero = "0.0.0.0"
 
 var (
 	// EnvRport is the raft cluster internal port.
-	EnvRport = util.GetEnvInt("BRAFT_RPORT", util.RandPort(15000))
+	EnvRport = util.GetEnvInt("BRAFT_RPORT", util.FindFreePort(15000-2))
 	// EnvDport is for the raft cluster nodes discovery.
 	EnvDport = util.FindFreePort(util.GetEnvInt("BRAFT_DPORT", EnvRport+1))
 	// EnvHport is used for the http service.

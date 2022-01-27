@@ -12,11 +12,39 @@ import (
 	"github.com/bingoohuang/braft"
 	"github.com/bingoohuang/braft/fsm"
 	"github.com/bingoohuang/braft/util"
+	"github.com/bingoohuang/gg/pkg/flagparse"
+	"github.com/bingoohuang/gg/pkg/v"
+	"github.com/bingoohuang/golog"
+	"github.com/bingoohuang/golog/pkg/ginlogrus"
+	"github.com/bingoohuang/golog/pkg/logfmt"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
+type Arg struct {
+	Version bool `flag:",v"`
+	Init    bool
+}
+
+// Usage is optional for customized show.
+func (a Arg) Usage() string {
+	return fmt.Sprintf(`
+Usage of goup:
+  -v    bool   show version
+  -init bool   create init ctl shell script`)
+}
+
+// VersionInfo is optional for customized version.
+func (a Arg) VersionInfo() string { return v.Version() }
+
 func main() {
-	log.Printf("Starting, rport:%d, dport:%d, hport:%d, discovery:%s",
+	c := &Arg{}
+	flagparse.Parse(c)
+
+	logfmt.RegisterLevelKey("[DEBUG]", logrus.DebugLevel)
+	golog.Setup()
+
+	log.Printf("Starting, rport: %d, dport: %d, hport: %d, discovery: %s",
 		braft.EnvRport, braft.EnvDport, braft.EnvHport, braft.EnvDiscoveryMethod.Name())
 	fsmService := fsm.NewMemMapService()
 	node, err := braft.NewNode(braft.WithServices(fsmService))
@@ -84,7 +112,9 @@ func startHTTP(node *braft.Node, httpPort int, fsmService *fsm.MemMapService) {
 		}
 	}
 
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.Use(ginlogrus.Logger(nil, true), gin.Recovery())
 	r.GET("/raft", serveRaft)
 	r.GET("/kv", serveKV)
 	r.POST("/kv", serveKV)

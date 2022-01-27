@@ -2,6 +2,7 @@ package braft
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -38,7 +39,6 @@ type Node struct {
 	discoveryConfig  *memberlist.Config
 	mList            *memberlist.Memberlist
 	stopped          uint32
-	logger           *log.Logger
 	stoppedCh        chan interface{}
 	conf             *NodeConfig
 }
@@ -117,6 +117,7 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 	raftConf := raft.DefaultConfig()
 	raftConf.LocalID = raft.ServerID(nodeID)
 	raftConf.LogLevel = hclog.Info.String()
+	raftConf.Logger = &nodeLogger{}
 
 	stableStoreFile := filepath.Join(nodeConfig.DataDir, "store.boltdb")
 	if util.FileExists(stableStoreFile) {
@@ -145,6 +146,7 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 	mlConfig := memberlist.DefaultWANConfig()
 	mlConfig.BindPort = EnvDport
 	mlConfig.Name = fmt.Sprintf("%s:%d", nodeID, EnvRport)
+	mlConfig.Logger = log.Default()
 
 	// default raft config
 	addr := fmt.Sprintf("%s:%d", HostZero, EnvRport)
@@ -157,10 +159,6 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 		return nil, err
 	}
 
-	// logging
-	logger := log.Default()
-	logger.SetPrefix("[BRaft] ")
-
 	return &Node{
 		ID:               nodeID,
 		RaftPort:         EnvRport,
@@ -170,13 +168,12 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 		conf:             nodeConfig,
 		DiscoveryPort:    EnvDport,
 		discoveryConfig:  mlConfig,
-		logger:           logger,
 	}, nil
 }
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
 func (n *Node) Start() (chan interface{}, error) {
-	n.logger.Print("Starting Node...")
+	log.Print("Starting Node...")
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
 
@@ -223,7 +220,7 @@ func (n *Node) Start() (chan interface{}, error) {
 	// serve grpc
 	go func() {
 		if err := grpcServer.Serve(grpcListen); err != nil {
-			n.logger.Fatal(err)
+			log.Fatal(err)
 		}
 	}()
 
@@ -235,7 +232,7 @@ func (n *Node) Start() (chan interface{}, error) {
 		n.Stop()
 	}()
 
-	n.logger.Printf("Node started on port %d and discovery port %d\n", n.RaftPort, n.DiscoveryPort)
+	log.Printf("Node started on port %d and discovery port %d", n.RaftPort, n.DiscoveryPort)
 	n.stoppedCh = make(chan interface{})
 
 	return n.stoppedCh, nil
@@ -252,22 +249,22 @@ func (n *Node) Stop() {
 		return
 	}
 
-	n.logger.Print("Stopping Node...")
+	log.Print("Stopping Node...")
 	n.conf.DiscoveryMethod.Stop()
 	if err := n.mList.Leave(10 * time.Second); err != nil {
-		n.logger.Printf("Failed to leave from discovery: %q", err.Error())
+		log.Printf("Failed to leave from discovery: %q", err.Error())
 	}
 	if err := n.mList.Shutdown(); err != nil {
-		n.logger.Printf("Failed to shutdown discovery: %q", err.Error())
+		log.Printf("Failed to shutdown discovery: %q", err.Error())
 	}
-	n.logger.Print("Discovery stopped")
+	log.Print("Discovery stopped")
 	if err := n.Raft.Shutdown().Error(); err != nil {
-		n.logger.Printf("Failed to shutdown Raft: %q", err.Error())
+		log.Printf("Failed to shutdown Raft: %q", err.Error())
 	}
-	n.logger.Print("Raft stopped")
+	log.Print("Raft stopped")
 	n.GrpcServer.GracefulStop()
-	n.logger.Print("GrpcServer Server stopped")
-	n.logger.Print("Node Stopped!")
+	log.Print("GrpcServer Server stopped")
+	log.Print("Node Stopped!")
 	n.stoppedCh <- true
 }
 
@@ -351,3 +348,60 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 
 	return n.ApplyOnLeader(payload)
 }
+
+// nodeLogger adapters nodeLogger to LevelLogger.
+type nodeLogger struct{}
+
+// Log Emit a message and key/value pairs at a provided log level
+func (l *nodeLogger) Log(level hclog.Level, msg string, args ...interface{}) {
+	switch {
+	case level <= hclog.Debug:
+		log.Printf("D! "+msg, args...)
+	case level == hclog.Info:
+		log.Printf("I! "+msg, args...)
+	case level == hclog.Warn:
+		log.Printf("W! "+msg, args...)
+	case level >= hclog.Error:
+		log.Printf("E! "+msg, args...)
+	}
+}
+
+// Trace Emit a message and key/value pairs at the TRACE level
+func (l *nodeLogger) Trace(msg string, args ...interface{}) {
+	l.Log(hclog.Trace, msg, args...)
+}
+
+// Debug Emit a message and key/value pairs at the DEBUG level
+func (l *nodeLogger) Debug(msg string, args ...interface{}) {
+	l.Log(hclog.Debug, msg, args...)
+}
+
+// Info Emit a message and key/value pairs at the INFO level
+func (l *nodeLogger) Info(msg string, args ...interface{}) {
+	l.Log(hclog.Info, msg, args...)
+}
+
+// Warn Emit a message and key/value pairs at the WARN level
+func (l *nodeLogger) Warn(msg string, args ...interface{}) {
+	l.Log(hclog.Warn, msg, args...)
+}
+
+// Error Emit a message and key/value pairs at the ERROR level
+func (l *nodeLogger) Error(msg string, args ...interface{}) {
+	l.Log(hclog.Error, msg, args...)
+}
+
+func (l *nodeLogger) IsTrace() bool                         { return false }
+func (l *nodeLogger) IsDebug() bool                         { return false }
+func (l *nodeLogger) IsInfo() bool                          { return false }
+func (l *nodeLogger) IsWarn() bool                          { return false }
+func (l *nodeLogger) IsError() bool                         { return false }
+func (l *nodeLogger) ImpliedArgs() []interface{}            { return nil }
+func (l *nodeLogger) With(args ...interface{}) hclog.Logger { return l }
+func (l *nodeLogger) Name() string                          { return "" }
+func (l *nodeLogger) Named(name string) hclog.Logger        { return l }
+func (l *nodeLogger) ResetNamed(name string) hclog.Logger   { return l }
+func (l *nodeLogger) SetLevel(level hclog.Level)            {}
+
+func (l *nodeLogger) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger { return nil }
+func (l *nodeLogger) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer   { return nil }
