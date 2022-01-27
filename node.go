@@ -37,7 +37,7 @@ type Node struct {
 	TransportManager *transport.Manager
 	discoveryConfig  *memberlist.Config
 	mList            *memberlist.Memberlist
-	stopped          *uint32
+	stopped          uint32
 	logger           *log.Logger
 	stoppedCh        chan interface{}
 	conf             *NodeConfig
@@ -109,8 +109,11 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 			}
 		}
 	}
+	log.Printf("node data dir: %s", nodeConfig.DataDir)
 
 	nodeID := ksuid.New().String()
+	log.Printf("nodeID: %s", nodeID)
+
 	raftConf := raft.DefaultConfig()
 	raftConf.LocalID = raft.ServerID(nodeID)
 	raftConf.LogLevel = hclog.Info.String()
@@ -158,9 +161,6 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 	logger := log.Default()
 	logger.SetPrefix("[BRaft] ")
 
-	// initial stopped flag
-	var stopped uint32
-
 	return &Node{
 		ID:               nodeID,
 		RaftPort:         EnvRport,
@@ -171,7 +171,6 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 		DiscoveryPort:    EnvDport,
 		discoveryConfig:  mlConfig,
 		logger:           logger,
-		stopped:          &stopped,
 	}, nil
 }
 
@@ -179,7 +178,7 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 func (n *Node) Start() (chan interface{}, error) {
 	n.logger.Print("Starting Node...")
 	// set stopped as false
-	atomic.CompareAndSwapUint32(n.stopped, 1, 0)
+	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
 
 	// raft server
 	configuration := raft.Configuration{
@@ -249,7 +248,7 @@ func (n *Node) DiscoveryName() string {
 
 // Stop stops the node and notifies on stopped channel returned in Start.
 func (n *Node) Stop() {
-	if !atomic.CompareAndSwapUint32(n.stopped, 0, 1) {
+	if !atomic.CompareAndSwapUint32(&n.stopped, 0, 1) {
 		return
 	}
 
@@ -267,7 +266,7 @@ func (n *Node) Stop() {
 	}
 	n.logger.Print("Raft stopped")
 	n.GrpcServer.GracefulStop()
-	n.logger.Print("Raft Server stopped")
+	n.logger.Print("GrpcServer Server stopped")
 	n.logger.Print("Node Stopped!")
 	n.stoppedCh <- true
 }
@@ -299,9 +298,9 @@ func (n *Node) handleDiscoveredNodes(discoveryChan chan string) {
 // NotifyJoin triggered when a new Node has been joined to the cluster (discovery only)
 // and capable of joining the Node to the raft cluster
 func (n *Node) NotifyJoin(node *memberlist.Node) {
-	nodeID, nodePort := util.Cut(node.Name, ":")
-	nodeAddr := fmt.Sprintf("%s:%s", node.Addr, nodePort)
 	if err := n.Raft.VerifyLeader().Error(); err == nil {
+		nodeID, nodePort := util.Cut(node.Name, ":")
+		nodeAddr := fmt.Sprintf("%s:%s", node.Addr, nodePort)
 		serverID := raft.ServerID(nodeID)
 		addr := raft.ServerAddress(nodeAddr)
 		if r := n.Raft.AddVoter(serverID, addr, 0, 0); r.Error() != nil {
@@ -341,12 +340,12 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 		if r.Error() != nil {
 			return nil, r.Error()
 		}
-		switch r.Response().(type) {
-		case error:
-			return nil, r.Response().(error)
-		default:
-			return r.Response(), nil
+
+		if err, ok := r.Response().(error); ok {
+			return nil, err
 		}
+
+		return r.Response(), nil
 	}
 
 	return n.ApplyOnLeader(payload)
