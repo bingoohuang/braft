@@ -32,44 +32,36 @@ You can create a simple EasyRaft Node with local mDNS discovery, an in-memory Ma
 is the only one built-in at the moment)
 
 ```go
+package main
+
 import (
-"github.com/bingoohuang/braft"
-"github.com/bingoohuang/braft/discovery"
-"github.com/bingoohuang/braft/fsm"
-"github.com/bingoohuang/braft/serializer"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/bingoohuang/braft"
+	"github.com/bingoohuang/braft/fsm"
 )
 
 func main() {
-    raftPort := 5000
-    discoveryPort := 5001
-    node, err := braft.NewNode(
-        raftPort,
-        discoveryPort,
-        []fsm.FSMService{fsm.NewInMemoryMapService()},
-        discovery.NewMDNSDiscovery(),
-        braft.WithDataDir("s1"),
-    )
-    
-    if err != nil {
-        panic(err)
-    }
-    stoppedCh, err := node.Start()
-    if err != nil {
-        panic(err)
-    }
-    defer node.Stop()
+	log.Printf("Starting, rport:%d, p:%d, hport:%d, discovery:%s",
+		braft.EnvRport, braft.EnvDport, braft.EnvHport, braft.EnvDiscoveryMethod.Name())
+	node, err := braft.NewNode(braft.WithServices(fsm.NewMemMapService()))
+	if err != nil {
+		log.Fatalf("failed to new node, error: %v", err)
+	}
+	stoppedCh, err := node.Start()
+	if err != nil {
+		log.Fatalf("failed to start node, error: %v", err)
+	}
+	defer node.Stop()
+
+	// wait for interruption/termination
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	<-sigs
+	<-stoppedCh
 }
 ```
-
-Build
----
-To regenerate gRPC code and install dependencies simply run `make install`
-
-TODO
----
-
-- [ ] Add more examples
-- [ ] Test coverage
-- [ ] Secure communication between nodes (SSL/TLS)
-- [ ] Backup/Restore backup handling
-- [ ] Allow configuration option to pass any custom raft.FSM
