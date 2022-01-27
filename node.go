@@ -341,11 +341,12 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 			return nil, r.Error()
 		}
 
-		if err, ok := r.Response().(error); ok {
+		rsp := r.Response()
+		if err, ok := rsp.(error); ok {
 			return nil, err
 		}
 
-		return r.Response(), nil
+		return rsp, nil
 	}
 
 	return n.ApplyOnLeader(payload)
