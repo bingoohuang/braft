@@ -2,7 +2,7 @@ package util
 
 import "os"
 
-//RemoveCreateDir - create a directory structure, if still exist -> delete it before
+// RemoveCreateDir - create a directory structure, if still exist -> delete it before
 func RemoveCreateDir(folderPath string) error {
 	if IsDir(folderPath) {
 		err := os.RemoveAll(folderPath)

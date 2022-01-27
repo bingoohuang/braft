@@ -1,20 +1,26 @@
-package easyraft
+package braft
 
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 
-	"github.com/bingoohuang/easyraft/grpc"
+	"github.com/bingoohuang/braft/discovery"
+	"github.com/bingoohuang/braft/grpc"
+	"github.com/bingoohuang/braft/util"
 	ggrpc "google.golang.org/grpc"
 )
 
-func ApplyOnLeader(node *Node, payload []byte) (interface{}, error) {
-	leader := string(node.Raft.Leader())
-	if leader == "" {
+// ApplyOnLeader apply a payload on the leader node.
+func (node *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
+	addr := string(node.Raft.Leader())
+	if addr == "" {
 		return nil, errors.New("unknown leader")
 	}
-	conn, err := ggrpc.Dial(string(leader), ggrpc.WithInsecure(), ggrpc.WithBlock(), ggrpc.EmptyDialOption{})
+
+	addr = strings.Replace(addr, HostZero, "127.0.0.1", 1)
+	conn, err := ggrpc.Dial(addr, ggrpc.WithInsecure(), ggrpc.WithBlock(), ggrpc.EmptyDialOption{})
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +31,7 @@ func ApplyOnLeader(node *Node, payload []byte) (interface{}, error) {
 		return nil, err
 	}
 
-	result, err := node.nodeConfig.Serializer.Deserialize(response.Response)
+	result, err := node.conf.Serializer.Deserialize(response.Response)
 	if err != nil {
 		return nil, err
 	}
@@ -33,21 +39,11 @@ func ApplyOnLeader(node *Node, payload []byte) (interface{}, error) {
 	return result, nil
 }
 
-func Cut(s, sep string) (a, b string) {
-	ret := strings.Split(s, sep)
-	if len(ret) >= 2 {
-		return ret[0], ret[1]
-	} else if len(ret) >= 1 {
-		return ret[0], ""
-	} else {
-		return "", ""
-	}
-}
-
+// GetPeerDetails returns the remote peer details.
 func GetPeerDetails(address string) (*grpc.GetDetailsResponse, error) {
-	addr, port := Cut(string(address), ":")
+	addr, port := util.Cut(string(address), ":")
 	switch addr {
-	case "0.0.0.0":
+	case HostZero:
 		address = "127.0.0.1:" + port
 	}
 	conn, err := ggrpc.Dial(address, ggrpc.WithInsecure(), ggrpc.WithBlock(), ggrpc.EmptyDialOption{})
@@ -63,3 +59,45 @@ func GetPeerDetails(address string) (*grpc.GetDetailsResponse, error) {
 
 	return response, nil
 }
+
+// HostZero is for the all zeros host.
+const HostZero = "0.0.0.0"
+
+var (
+	// EnvRport is the raft cluster internal port.
+	EnvRport = util.GetEnvInt("BRAFT_RPORT", util.RandPort(15000))
+	// EnvDport is for the raft cluster nodes discovery.
+	EnvDport = util.FindFreePort(util.GetEnvInt("BRAFT_DPORT", EnvRport+1))
+	// EnvHport is used for the http service.
+	EnvHport = util.FindFreePort(util.GetEnvInt("BRAFT_HPORT", EnvDport+1))
+	// EnvDiscovery is the discovery method for the raft cluster.
+	// e.g.
+	// static:192.168.1.1:1500,192.168.1.2:1500,192.168.1.3:1500
+	// k8s:svcType=braft;svcBiz=rig
+	// mdns:_braft._tcp
+	EnvDiscovery = os.Getenv("BRAFT_DISCOVERY")
+
+	// EnvDiscoveryMethod is the environment defined discovery method.
+	EnvDiscoveryMethod = func() discovery.Method {
+		s := strings.ToLower(EnvDiscovery)
+		switch {
+		case s == "k8s" || strings.HasPrefix(s, "k8s:"):
+			var serviceLabels map[string]string
+			if strings.HasPrefix(s, "k8s:") {
+				s1 := strings.TrimPrefix(EnvDiscovery, "k8s:")
+				serviceLabels = util.ParseStringToMap(s1, ";", ":")
+			}
+			return discovery.NewKubernetesDiscovery("", serviceLabels, "")
+		case s == "mdns" || s == "" || strings.HasPrefix(s, "mdns:"):
+			if strings.HasPrefix(s, "mdns:") {
+				s = strings.TrimPrefix(s, "mdns:")
+			} else {
+				s = ""
+			}
+			return discovery.NewMdnsDiscovery(s)
+		default:
+			s = strings.TrimPrefix(s, "static:")
+			return discovery.NewStaticDiscovery(strings.Split(s, ","))
+		}
+	}()
+)

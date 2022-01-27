@@ -12,8 +12,11 @@ message GetDetailsRequest {
 
 message GetDetailsResponse {
     string serverId = 1;
-    int32 discoveryPort = 2;
-    string raftState = 3;
+    string raftState = 2;
+    string leader = 3;
+    int32 raftPort = 4;
+    int32 discoveryPort = 5;
+	int32 httpPort = 6;
 }
 
 message ApplyRequest {

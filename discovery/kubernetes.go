@@ -15,79 +15,73 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const (
-	defaultK8sDiscoveryNodePortName = "easyraft"
-	defaultK8sDiscoverySvcType      = "easyraft"
-)
-
-type KubernetesDiscovery struct {
-	namespace             string
-	matchingServiceLabels map[string]string
-	nodePortName          string
-	discoveryChan         chan string
-	stopChan              chan bool
-	delayTime             time.Duration
+type kubernetesDiscovery struct {
+	namespace     string
+	serviceLabels map[string]string
+	portName      string
+	discoveryChan chan string
+	stopChan      chan bool
 }
 
-func NewKubernetesDiscovery(namespace string, serviceLabels map[string]string, raftPortName string) DiscoveryMethod {
+func NewKubernetesDiscovery(namespace string, serviceLabels map[string]string, raftPortName string) Method {
 	if raftPortName == "" {
-		raftPortName = defaultK8sDiscoveryNodePortName
+		raftPortName = "braft"
 	}
 	if len(serviceLabels) == 0 {
-		serviceLabels = map[string]string{"svcType": defaultK8sDiscoverySvcType}
+		serviceLabels = map[string]string{"svcType": "braft"}
 	}
 
-	return &KubernetesDiscovery{
-		namespace:             namespace,
-		matchingServiceLabels: serviceLabels,
-		nodePortName:          raftPortName,
-		discoveryChan:         make(chan string),
-		stopChan:              make(chan bool),
-		delayTime:             time.Duration(rand.Intn(5)+1) * time.Second,
+	return &kubernetesDiscovery{
+		namespace:     namespace,
+		serviceLabels: serviceLabels,
+		portName:      raftPortName,
+		discoveryChan: make(chan string),
+		stopChan:      make(chan bool),
 	}
 }
 
 // Name gives the name of the discovery.
-func (d *KubernetesDiscovery) Name() string {
+func (d *kubernetesDiscovery) Name() string {
 	var labels []string
 
-	for k, v := range d.matchingServiceLabels {
+	for k, v := range d.serviceLabels {
 		labels = append(labels, k+":"+v)
 	}
 
-	return "K8s:namespace=" + d.namespace + ",labels=" + strings.Join(labels, "&")
+	return "k8s:ns=" + d.namespace + ",labels=" + strings.Join(labels, "&")
 }
 
-func (k *KubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
-	config, err := rest.InClusterConfig()
+func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
+	cc, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}
-	clientSet, err := kubernetes.NewForConfig(config)
+	kc, err := kubernetes.NewForConfig(cc)
 	if err != nil {
 		return nil, err
 	}
-	go k.discovery(clientSet)
+	go k.discovery(kc)
 	return k.discoveryChan, nil
 }
 
-func (k *KubernetesDiscovery) discovery(clientSet *kubernetes.Clientset) {
+func (k *kubernetesDiscovery) discovery(kc *kubernetes.Clientset) {
 	for {
 		select {
 		case <-k.stopChan:
 			return
 		default:
-			k.search(clientSet)
-			time.Sleep(k.delayTime)
+			k.search(kc)
+			time.Sleep(time.Duration(rand.Intn(5)+1) * time.Second)
 		}
 	}
 }
 
-func (k *KubernetesDiscovery) search(clientSet *kubernetes.Clientset) {
-	services, err := clientSet.CoreV1().Services(k.namespace).List(context.Background(), metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(k.matchingServiceLabels).String(),
-		Watch:         false,
-	})
+func (k *kubernetesDiscovery) search(clientSet *kubernetes.Clientset) {
+	services, err := clientSet.CoreV1().Services(k.namespace).List(context.Background(),
+		metav1.ListOptions{
+			LabelSelector: labels.SelectorFromSet(k.serviceLabels).String(),
+			Watch:         false,
+		})
 	if err != nil {
 		log.Println(err)
 		return
@@ -114,10 +108,10 @@ func (k *KubernetesDiscovery) search(clientSet *kubernetes.Clientset) {
 	}
 }
 
-func (k *KubernetesDiscovery) findPort(pod v1.Pod) (p v1.ContainerPort) {
+func (k *kubernetesDiscovery) findPort(pod v1.Pod) (p v1.ContainerPort) {
 	for _, container := range pod.Spec.Containers {
 		for _, port := range container.Ports {
-			if port.Name == k.nodePortName {
+			if port.Name == k.portName {
 				return port
 			}
 		}
@@ -125,8 +119,5 @@ func (k *KubernetesDiscovery) findPort(pod v1.Pod) (p v1.ContainerPort) {
 	return p
 }
 
-func (k *KubernetesDiscovery) SupportsNodeAutoRemoval() bool { return true }
-
-func (k *KubernetesDiscovery) Stop() {
-	k.stopChan <- true
-}
+func (k *kubernetesDiscovery) SupportsNodeAutoRemoval() bool { return true }
+func (k *kubernetesDiscovery) Stop()                         { k.stopChan <- true }

@@ -8,8 +8,7 @@ func NewMsgPackSerializer() Serializer {
 	return &MsgPackSerializer{}
 }
 
-type MsgPackSerializer struct {
-}
+type MsgPackSerializer struct{}
 
 func (s *MsgPackSerializer) Serialize(data interface{}) ([]byte, error) {
 	return msgpack.Marshal(data)

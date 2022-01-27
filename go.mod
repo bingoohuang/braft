@@ -1,4 +1,4 @@
-module github.com/bingoohuang/easyraft
+module github.com/bingoohuang/braft
 
 go 1.17
 

@@ -33,21 +33,21 @@ is the only one built-in at the moment)
 
 ```go
 import (
-"github.com/bingoohuang/easyraft"
-"github.com/bingoohuang/easyraft/discovery"
-"github.com/bingoohuang/easyraft/fsm"
-"github.com/bingoohuang/easyraft/serializer"
+"github.com/bingoohuang/braft"
+"github.com/bingoohuang/braft/discovery"
+"github.com/bingoohuang/braft/fsm"
+"github.com/bingoohuang/braft/serializer"
 )
 
 func main() {
     raftPort := 5000
     discoveryPort := 5001
-    node, err := easyraft.NewNode(
+    node, err := braft.NewNode(
         raftPort,
         discoveryPort,
         []fsm.FSMService{fsm.NewInMemoryMapService()},
         discovery.NewMDNSDiscovery(),
-        easyraft.WithDataDir("s1"),
+        braft.WithDataDir("s1"),
     )
     
     if err != nil {

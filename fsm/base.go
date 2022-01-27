@@ -2,21 +2,18 @@ package fsm
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"strings"
 
-	"github.com/bingoohuang/easyraft/serializer"
+	"github.com/bingoohuang/braft/serializer"
 	"github.com/hashicorp/raft"
 )
 
 type RoutingFSM struct {
-	services            map[string]FSMService
-	ser                 serializer.Serializer
-	reqDataTypes        []interface{}
-	reqServiceDataTypes map[string]FSMService
+	services     map[string]FSMService
+	ser          serializer.Serializer
+	reqDataTypes []ReqTypeInfo
 }
 
 func NewRoutingFSM(services []FSMService) FSM {
@@ -25,29 +22,25 @@ func NewRoutingFSM(services []FSMService) FSM {
 		servicesMap[service.Name()] = service
 	}
 	return &RoutingFSM{
-		services:            servicesMap,
-		reqServiceDataTypes: map[string]FSMService{},
+		services: servicesMap,
 	}
 }
 
 func (i *RoutingFSM) Init(ser serializer.Serializer) {
 	i.ser = ser
 	for _, service := range i.services {
-		i.reqDataTypes = append(i.reqDataTypes, service.GetReqDataTypes()...)
-		for _, dt := range service.GetReqDataTypes() {
-			i.reqServiceDataTypes[fmt.Sprintf("%#v", dt)] = service
-		}
+		i.reqDataTypes = append(i.reqDataTypes, MakeReqTypeInfo(service))
 	}
 }
 
-func (i *RoutingFSM) Apply(log *raft.Log) interface{} {
-	switch log.Type {
+func (i *RoutingFSM) Apply(raftlog *raft.Log) interface{} {
+	switch raftlog.Type {
 	case raft.LogCommand:
-		// deserialize
-		payload, err := i.ser.Deserialize(log.Data)
+		payload, err := i.ser.Deserialize(raftlog.Data)
 		if err != nil {
 			return err
 		}
+
 		payloadMap := payload.(map[string]interface{})
 
 		// check request type
@@ -56,13 +49,10 @@ func (i *RoutingFSM) Apply(log *raft.Log) interface{} {
 			fields = append(fields, k)
 		}
 		// routing request to service
-		if foundType, err := getTargetType(i.reqDataTypes, fields); err == nil {
-			for typeName, service := range i.reqServiceDataTypes {
-				if strings.EqualFold(fmt.Sprintf("%#v", foundType), typeName) {
-					return service.NewLog(foundType, payloadMap)
-				}
-			}
+		if target, err := getTargetTypeInfo(i.reqDataTypes, fields); err == nil {
+			return target.Service.NewLog(payloadMap)
 		}
+
 		return errors.New("unknown request data type")
 	}
 

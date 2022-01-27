@@ -2,14 +2,14 @@ package discovery
 
 import "strings"
 
-type StaticDiscovery struct {
+type staticDiscovery struct {
 	Peers         []string
 	discoveryChan chan string
 	stopChan      chan bool
 }
 
-func NewStaticDiscovery(peers []string) DiscoveryMethod {
-	return &StaticDiscovery{
+func NewStaticDiscovery(peers []string) Method {
+	return &staticDiscovery{
 		Peers:         peers,
 		discoveryChan: make(chan string),
 		stopChan:      make(chan bool),
@@ -17,15 +17,13 @@ func NewStaticDiscovery(peers []string) DiscoveryMethod {
 }
 
 // Name gives the name of the discovery.
-func (d *StaticDiscovery) Name() string {
-	return "Static:" + strings.Join(d.Peers, ",")
+func (d *staticDiscovery) Name() string {
+	return "static:" + strings.Join(d.Peers, ",")
 }
 
-func (d *StaticDiscovery) SupportsNodeAutoRemoval() bool {
-	return false
-}
+func (d *staticDiscovery) SupportsNodeAutoRemoval() bool { return false }
 
-func (d *StaticDiscovery) Start(_ string, _ int) (chan string, error) {
+func (d *staticDiscovery) Start(_ string, _ int) (chan string, error) {
 	go func() {
 		for _, peer := range d.Peers {
 			d.discoveryChan <- peer
@@ -34,6 +32,6 @@ func (d *StaticDiscovery) Start(_ string, _ int) (chan string, error) {
 	return d.discoveryChan, nil
 }
 
-func (d *StaticDiscovery) Stop() {
+func (d *staticDiscovery) Stop() {
 	d.stopChan <- true
 }

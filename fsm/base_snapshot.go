@@ -1,8 +1,9 @@
 package fsm
 
 import (
-	"github.com/hashicorp/raft"
 	"sync"
+
+	"github.com/hashicorp/raft"
 )
 
 type BaseFSMSnapshot struct {

@@ -5,14 +5,34 @@ import (
 	"reflect"
 )
 
-func MatchAll(a []string, f func(int, string) bool) bool {
-	for i, c := range a {
-		if !f(i, c) {
-			return false
+type ReqTypeInfo struct {
+	Service   FSMService
+	ReqFields []string
+}
+
+func MakeReqTypeInfo(service FSMService) ReqTypeInfo {
+	// get current type fields list
+	t := reflect.TypeOf(service.GetReqDataType())
+
+	typeFields := make([]string, t.NumField())
+	for i := 0; i < t.NumField(); i++ {
+		typeFields[i] = t.Field(i).Name
+	}
+
+	return ReqTypeInfo{
+		Service:   service,
+		ReqFields: typeFields,
+	}
+}
+
+func getTargetTypeInfo(types []ReqTypeInfo, expectedFields []string) (ReqTypeInfo, error) {
+	for _, i := range types {
+		if SliceEqual(expectedFields, i.ReqFields) {
+			return i, nil
 		}
 	}
 
-	return true
+	return ReqTypeInfo{}, errors.New("unknown type!")
 }
 
 func Contains(a []string, b string) bool {
@@ -25,25 +45,27 @@ func Contains(a []string, b string) bool {
 	return false
 }
 
-func getTargetType(types []interface{}, expectedFields []string) (interface{}, error) {
-	for _, i := range types {
-		// get current type fields list
-		v := reflect.ValueOf(i)
-		typeOfS := v.Type()
-		currentTypeFields := make([]string, v.NumField())
-		for i := 0; i < v.NumField(); i++ {
-			currentTypeFields[i] = typeOfS.Field(i).Name
-		}
-
-		// compare current vs expected fields
-		foundAllFields := MatchAll(expectedFields, func(i int, s string) bool {
-			return Contains(currentTypeFields, s)
-		})
-
-		if foundAllFields && len(expectedFields) == len(currentTypeFields) {
-			return i, nil
-		}
+// https://stackoverflow.com/questions/36000487/check-for-equality-on-slices-without-order
+func SliceEqual(x, y []string) bool {
+	if len(x) != len(y) {
+		return false
 	}
 
-	return nil, errors.New("unknown type!")
+	// create a map of string -> int
+	diff := make(map[string]int, len(x))
+	for _, _x := range x {
+		// 0 value for int is 0, so just increment a counter for the string
+		diff[_x]++
+	}
+	for _, _y := range y {
+		// If the string _y is not in diff bail out early
+		if _, ok := diff[_y]; !ok {
+			return false
+		}
+		diff[_y] -= 1
+		if diff[_y] == 0 {
+			delete(diff, _y)
+		}
+	}
+	return len(diff) == 0
 }

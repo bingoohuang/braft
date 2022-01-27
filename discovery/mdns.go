@@ -10,41 +10,43 @@ import (
 	"github.com/grandcat/zeroconf"
 )
 
-const (
-	mdnsServiceName = "_easyraft._tcp"
-)
-
-type MDNSDiscovery struct {
+type mdnsDiscovery struct {
 	delayTime     time.Duration
 	nodeID        string
+	serviceName   string
 	nodePort      int
 	mdnsServer    *zeroconf.Server
 	discoveryChan chan string
 	stopChan      chan bool
 }
 
-func NewMDNSDiscovery() DiscoveryMethod {
+func NewMdnsDiscovery(serviceName string) Method {
+	if serviceName == "" {
+		serviceName = "_braft._tcp"
+	}
 	rand.Seed(time.Now().UnixNano())
 	delayTime := time.Duration(rand.Intn(5)+1) * time.Second
-	return &MDNSDiscovery{
+	return &mdnsDiscovery{
 		delayTime:     delayTime,
+		nodeID:        "",
+		serviceName:   serviceName,
+		nodePort:      0,
+		mdnsServer:    &zeroconf.Server{},
 		discoveryChan: make(chan string),
 		stopChan:      make(chan bool),
 	}
 }
 
 // Name gives the name of the discovery.
-func (d *MDNSDiscovery) Name() string {
-	return "Mdns:" + mdnsServiceName
-}
+func (d *mdnsDiscovery) Name() string { return "mdns:" + d.serviceName }
 
-func (d *MDNSDiscovery) Start(nodeID string, nodePort int) (chan string, error) {
+func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) {
 	d.nodeID, d.nodePort = nodeID, nodePort
 	go d.discovery()
 	return d.discoveryChan, nil
 }
 
-func (d *MDNSDiscovery) discovery() {
+func (d *mdnsDiscovery) discovery() {
 	// expose mdns server
 	mdnsServer, err := d.exposeMDNS()
 	if err != nil {
@@ -75,7 +77,7 @@ func (d *MDNSDiscovery) discovery() {
 			cancel()
 			break
 		default:
-			err = resolver.Browse(ctx, mdnsServiceName, "local.", entries)
+			err = resolver.Browse(ctx, d.serviceName, "local.", entries)
 			if err != nil {
 				log.Printf("Error during mDNS lookup: %v", err)
 			}
@@ -84,15 +86,13 @@ func (d *MDNSDiscovery) discovery() {
 	}
 }
 
-func (d *MDNSDiscovery) exposeMDNS() (*zeroconf.Server, error) {
-	return zeroconf.Register(d.nodeID, mdnsServiceName, "local.", d.nodePort, []string{"txtv=0", "lo=1", "la=2"}, nil)
+func (d *mdnsDiscovery) exposeMDNS() (*zeroconf.Server, error) {
+	return zeroconf.Register(d.nodeID, d.serviceName, "local.", d.nodePort, []string{"txtv=0", "lo=1", "la=2"}, nil)
 }
 
-func (d *MDNSDiscovery) SupportsNodeAutoRemoval() bool {
-	return true
-}
+func (d *mdnsDiscovery) SupportsNodeAutoRemoval() bool { return true }
 
-func (d *MDNSDiscovery) Stop() {
+func (d *mdnsDiscovery) Stop() {
 	d.stopChan <- true
 	d.mdnsServer.Shutdown()
 }
