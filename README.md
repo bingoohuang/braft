@@ -92,6 +92,7 @@ Content-Length: 1644
   "CurrentLeader": true,
   "Discovery": "mdns:_braft._tcp",
   "Leader": "192.168.162.88:15000",
+  "NodeNum": 3,
   "Nodes": [
     {
       "Leader": "192.168.162.88:15000",

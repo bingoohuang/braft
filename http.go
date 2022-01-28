@@ -93,6 +93,7 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, map[string]interface{}{
 		"Leader":        n.Raft.Leader(),
 		"Nodes":         nodes,
+		"NodeNum":       len(nodes),
 		"Discovery":     n.DiscoveryName(),
 		"CurrentLeader": n.IsLeader(),
 	})
