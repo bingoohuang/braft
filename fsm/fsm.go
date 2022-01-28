@@ -9,7 +9,7 @@ import (
 type FSM interface {
 	raft.FSM
 
-	// Init is used to pass the original serializer from EasyRaft Node to be able to deserialize messages
+	// Init is used to pass the original serializer from BRaft Node to be able to deserialize messages
 	// coming from other nodes
 	Init(ser serializer.Serializer)
 }

@@ -1,6 +1,6 @@
 package serializer
 
-// Serializer interface is to provide serialize and deserialize methods for EasyRaft Node
+// Serializer interface is to provide serialize and deserialize methods for BRaft Node
 type Serializer interface {
 	// Serialize is used to serialize and data to a []byte
 	Serialize(data interface{}) ([]byte, error)

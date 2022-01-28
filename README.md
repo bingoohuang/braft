@@ -28,7 +28,7 @@ Features
 
 Get Started
 ---
-You can create a simple EasyRaft Node with local mDNS discovery, an in-memory Map service and MsgPack as serializer(this
+You can create a simple BRaft Node with local mDNS discovery, an in-memory Map service and MsgPack as serializer(this
 is the only one built-in at the moment)
 
 ```go
@@ -36,32 +36,22 @@ package main
 
 import (
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/bingoohuang/braft"
-	"github.com/bingoohuang/braft/fsm"
 )
 
 func main() {
-	log.Printf("Starting, rport:%d, p:%d, hport:%d, discovery:%s",
-		braft.EnvRport, braft.EnvDport, braft.EnvHport, braft.EnvDiscoveryMethod.Name())
-	node, err := braft.NewNode(braft.WithServices(fsm.NewMemMapService()))
+	node, err := braft.NewNode()
 	if err != nil {
 		log.Fatalf("failed to new node, error: %v", err)
 	}
-	stoppedCh, err := node.Start()
-	if err != nil {
+	if err := node.Start(); err != nil {
 		log.Fatalf("failed to start node, error: %v", err)
 	}
-	defer node.Stop()
 
-	// wait for interruption/termination
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	<-sigs
-	<-stoppedCh
+	node.RunHTTP()
 }
 ```
+
+1. use mDNS discovery: `GOLOG_STDOUT=true braft` on multiple nodes.
+1. use static discovery: `GOLOG_STDOUT=true BRAFT_RPORT=15000 BRAFT_DISCOVERY="192.168.126.16,192.168.126.18,192.168.126.182" braft`  on multiple nodes.

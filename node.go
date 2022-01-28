@@ -7,10 +7,8 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	transport "github.com/Jille/raft-grpc-transport"
@@ -19,18 +17,19 @@ import (
 	"github.com/bingoohuang/braft/proto"
 	"github.com/bingoohuang/braft/serializer"
 	"github.com/bingoohuang/braft/util"
+	"github.com/bingoohuang/golog/pkg/logfmt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/segmentio/ksuid"
+	"github.com/sirupsen/logrus"
 	ggrpc "google.golang.org/grpc"
 )
 
 // Node is the raft cluster node.
 type Node struct {
 	ID               string
-	RaftPort         int
 	address          string
 	Raft             *raft.Raft
 	GrpcServer       *ggrpc.Server
@@ -38,7 +37,6 @@ type Node struct {
 	discoveryConfig  *memberlist.Config
 	mList            *memberlist.Memberlist
 	stopped          uint32
-	stoppedCh        chan interface{}
 	conf             *Config
 }
 
@@ -76,6 +74,9 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	}
 	if nodeConfig.Discovery == nil {
 		nodeConfig.Discovery = EnvDiscovery
+	}
+	if len(nodeConfig.Services) == 0 {
+		nodeConfig.Services = []fsm.Service{fsm.NewMemMapService()}
 	}
 
 	if nodeConfig.DataDir == "" {
@@ -121,7 +122,6 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 
 	snapshotStore := raft.NewDiscardSnapshotStore()
 
-	// init FSM
 	sm := fsm.NewRoutingFSM(nodeConfig.Services)
 	sm.Init(nodeConfig.Serializer)
 
@@ -132,7 +132,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	discoveryConfig.Logger = log.Default()
 
 	// default raft config
-	addr := fmt.Sprintf("%s:%d", HostZero, EnvRport)
+	addr := fmt.Sprintf("%s:%d", EnvIP, EnvRport)
 	// grpc transport
 	t := transport.New(raft.ServerAddress(addr), []ggrpc.DialOption{ggrpc.WithInsecure()})
 
@@ -144,7 +144,6 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 
 	return &Node{
 		ID:               nodeID,
-		RaftPort:         EnvRport,
 		address:          addr,
 		Raft:             raftServer,
 		TransportManager: t,
@@ -154,7 +153,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 }
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
-func (n *Node) Start() (chan interface{}, error) {
+func (n *Node) Start() error {
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
@@ -167,21 +166,21 @@ func (n *Node) Start() (chan interface{}, error) {
 	}
 	f := n.Raft.BootstrapCluster(configuration)
 	if err := f.Error(); err != nil {
-		return nil, err
+		return err
 	}
 
 	// memberlist discovery
 	n.discoveryConfig.Events = n
 	list, err := memberlist.Create(n.discoveryConfig)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	n.mList = list
 
 	// grpc server
 	grpcListen, err := net.Listen("tcp", n.address)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	n.GrpcServer = ggrpc.NewServer()
 
@@ -191,10 +190,12 @@ func (n *Node) Start() (chan interface{}, error) {
 	// register client services
 	proto.RegisterRaftServer(n.GrpcServer, NewClientGrpcService(n))
 
+	logfmt.RegisterLevelKey("[DEBUG]", logrus.DebugLevel)
+
 	// discovery method
-	discoveryChan, err := n.conf.Discovery.Start(n.ID, n.RaftPort)
+	discoveryChan, err := n.conf.Discovery.Start(n.ID, EnvRport)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	go n.handleDiscoveredNodes(discoveryChan)
 
@@ -205,18 +206,9 @@ func (n *Node) Start() (chan interface{}, error) {
 		}
 	}()
 
-	// handle interruption
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT, syscall.SIGKILL)
-	go func() {
-		<-sigs
-		n.Stop()
-	}()
-
 	log.Printf("Node started")
-	n.stoppedCh = make(chan interface{})
 
-	return n.stoppedCh, nil
+	return nil
 }
 
 // DiscoveryName returns the name of discovery.
@@ -246,7 +238,6 @@ func (n *Node) Stop() {
 	n.GrpcServer.GracefulStop()
 	log.Print("GrpcServer Server stopped")
 	log.Print("Node Stopped!")
-	n.stoppedCh <- true
 }
 
 func (n *Node) findPeerServer(peer, serverID string) bool {
@@ -261,9 +252,13 @@ func (n *Node) findPeerServer(peer, serverID string) bool {
 // handleDiscoveredNodes handles the discovered Node additions
 func (n *Node) handleDiscoveredNodes(discoveryChan chan string) {
 	for peer := range discoveryChan {
+		peerHost, port := util.Cut(peer, ":")
+		if port == "" {
+			peer = fmt.Sprintf("%s:%d", peerHost, EnvRport)
+		}
+
 		if rsp, err := GetPeerDetails(peer); err == nil {
 			if !n.findPeerServer(peer, rsp.ServerId) {
-				peerHost, _ := util.Cut(peer, ":")
 				peerAddr := fmt.Sprintf("%s:%d", peerHost, rsp.DiscoveryPort)
 				if _, err = n.mList.Join([]string{peerAddr}); err != nil {
 					log.Printf("failed to join to cluster using discovery address: %s", peerAddr)

@@ -2,7 +2,7 @@
 Simple HTTP based key-value store example
 ---
 This example demonstrates, how easily you can implement an HTTP based in-memory distributed
-key value store using EasyRaft.
+key value store using BRaft.
 
 Usage
 ---
