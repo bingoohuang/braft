@@ -54,4 +54,17 @@ func main() {
 ```
 
 1. use mDNS discovery: `GOLOG_STDOUT=true braft` on multiple nodes.
-1. use static discovery: `GOLOG_STDOUT=true BRAFT_RPORT=15000 BRAFT_DISCOVERY="192.168.126.16,192.168.126.18,192.168.126.182" braft`  on multiple nodes.
+1. use static discovery: `GOLOG_STDOUT=true BRAFT_DISCOVERY="192.168.126.16,192.168.126.18,192.168.126.182" braft`  on multiple nodes.
+
+
+## env VARIABLES
+
+NAME | USAGE | DEFAULT | EXAMPELE
+---|---|---|---
+GOLOG_STDOUT| print log on stdout| N/A| `export GOLOG_STDOUT=true`
+BRAFT_DISCOVERY| discovery configuration |mdns:_braft._tcp | <p>mdns:_braft._tcp</p><p>static:192.168.1.1,192.168.1.2,192.168.1.3</p><p>k8s:svcType=braft;svcBiz=rig</p>
+BRAFT_IP|specify the IP| first host IP | `export BRAFT_IP=192.168.1.1`
+BRAFT_IF|specify the IF name| N/A | `export BRAFT_IF=eth0`
+BRAFT_RPORT|specify the raft port| 15000 | `export BRAFT_RPORT=15000`
+BRAFT_DPORT|specify the discovery port| BRAFT_RPORT+1 | `export BRAFT_DPORT=15001`
+BRAFT_HPORT|specify the http port| BRAFT_DPORT+1 | `export BRAFT_HPORT=15002`

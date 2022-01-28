@@ -1,6 +1,7 @@
 package braft
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 	"github.com/bingoohuang/braft/proto"
 	"github.com/bingoohuang/braft/serializer"
 	"github.com/bingoohuang/braft/util"
+	"github.com/bingoohuang/gg/pkg/goip"
 	"github.com/bingoohuang/golog/pkg/logfmt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
@@ -24,13 +26,14 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
+	"github.com/vmihailenco/msgpack/v5"
 	ggrpc "google.golang.org/grpc"
 )
 
 // Node is the raft cluster node.
 type Node struct {
 	ID               string
-	address          string
+	addr             string
 	Raft             *raft.Raft
 	GrpcServer       *ggrpc.Server
 	TransportManager *transport.Manager
@@ -62,6 +65,14 @@ func WithDataDir(s string) ConfigFn { return func(c *Config) { c.DataDir = s } }
 
 // WithSerializer specifies the serializer.Serializer of the raft log messages.
 func WithSerializer(s serializer.Serializer) ConfigFn { return func(c *Config) { c.Serializer = s } }
+
+// RaftID is the structure of node ID.
+type RaftID struct {
+	ID                  string
+	Rport, Dport, Hport int
+	Hostname            string
+	IP                  []string
+}
 
 // NewNode returns an BRaft node.
 func NewNode(fns ...ConfigFn) (*Node, error) {
@@ -95,7 +106,20 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	}
 	log.Printf("node data dir: %s", nodeConfig.DataDir)
 
-	nodeID := ksuid.New().String()
+	h, _ := os.Hostname()
+	_, ips := goip.MainIP()
+	raftID := RaftID{
+		ID:       ksuid.New().String(),
+		Rport:    EnvRport,
+		Dport:    EnvDport,
+		Hport:    EnvHport,
+		Hostname: h,
+		IP:       ips,
+	}
+
+	raftIDMsg, _ := msgpack.Marshal(raftID)
+	nodeID := base64.RawURLEncoding.EncodeToString(raftIDMsg)
+
 	log.Printf("nodeID: %s", nodeID)
 
 	raftConf := raft.DefaultConfig()
@@ -109,19 +133,22 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 			return nil, err
 		}
 	}
+	// StableStore 稳定存储,存储Raft集群的节点信息
 	stableStore, err := raftboltdb.NewBoltStore(stableStoreFile)
 	if err != nil {
 		return nil, err
 	}
 
-	const raftLogCacheSize = 512
-	logStore, err := raft.NewLogCache(raftLogCacheSize, stableStore)
+	// LogStore 存储Raft的日志
+	logStore, err := raft.NewLogCache(512, stableStore)
 	if err != nil {
 		return nil, err
 	}
 
+	// SnapshotStore 快照存储,存储节点的快照信息
 	snapshotStore := raft.NewDiscardSnapshotStore()
 
+	// FSM 有限状态机
 	sm := fsm.NewRoutingFSM(nodeConfig.Services)
 	sm.Init(nodeConfig.Serializer)
 
@@ -133,7 +160,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 
 	// default raft config
 	addr := fmt.Sprintf("%s:%d", EnvIP, EnvRport)
-	// grpc transport
+	// grpc transport, Transpot Raft节点之间的通信通道
 	t := transport.New(raft.ServerAddress(addr), []ggrpc.DialOption{ggrpc.WithInsecure()})
 
 	// raft server
@@ -144,7 +171,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 
 	return &Node{
 		ID:               nodeID,
-		address:          addr,
+		addr:             fmt.Sprintf(":%d", EnvRport),
 		Raft:             raftServer,
 		TransportManager: t,
 		conf:             nodeConfig,
@@ -178,7 +205,7 @@ func (n *Node) Start() error {
 	n.mList = list
 
 	// grpc server
-	grpcListen, err := net.Listen("tcp", n.address)
+	grpcListen, err := net.Listen("tcp", n.addr)
 	if err != nil {
 		return err
 	}
@@ -242,7 +269,7 @@ func (n *Node) Stop() {
 
 func (n *Node) findPeerServer(peer, serverID string) bool {
 	for _, s := range n.Raft.GetConfiguration().Configuration().Servers {
-		if s.ID == raft.ServerID(serverID) || string(s.Address) == peer {
+		if s.ID == raft.ServerID(serverID) {
 			return true
 		}
 	}
@@ -271,12 +298,10 @@ func (n *Node) handleDiscoveredNodes(discoveryChan chan string) {
 // NotifyJoin triggered when a new Node has been joined to the cluster (discovery only)
 // and capable of joining the Node to the raft cluster
 func (n *Node) NotifyJoin(node *memberlist.Node) {
-	if err := n.Raft.VerifyLeader().Error(); err == nil {
+	if n.IsLeader() {
 		nodeID, nodePort := util.Cut(node.Name, ":")
 		nodeAddr := fmt.Sprintf("%s:%s", node.Addr, nodePort)
-		serverID := raft.ServerID(nodeID)
-		addr := raft.ServerAddress(nodeAddr)
-		if r := n.Raft.AddVoter(serverID, addr, 0, 0); r.Error() != nil {
+		if r := n.Raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(nodeAddr), 0, 0); r.Error() != nil {
 			log.Println(r.Error().Error())
 		}
 	}
@@ -289,7 +314,7 @@ func (n *Node) NotifyLeave(node *memberlist.Node) {
 		return
 	}
 
-	if err := n.Raft.VerifyLeader().Error(); err == nil {
+	if n.IsLeader() {
 		nodeID, _ := util.Cut(node.Name, ":")
 		if r := n.Raft.RemoveServer(raft.ServerID(nodeID), 0, 0); r.Error() != nil {
 			log.Println(r.Error().Error())
@@ -300,6 +325,9 @@ func (n *Node) NotifyLeave(node *memberlist.Node) {
 // NotifyUpdate responses the update of raft cluster member.
 func (n *Node) NotifyUpdate(_ *memberlist.Node) {}
 
+// IsLeader tells whether the current node is the leader.
+func (n *Node) IsLeader() bool { return n.Raft.VerifyLeader().Error() == nil }
+
 // RaftApply is used to apply any new logs to the raft cluster
 // this method does automatic forwarding to Leader Node
 func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{}, error) {
@@ -308,7 +336,7 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 		return nil, err
 	}
 
-	if err := n.Raft.VerifyLeader().Error(); err == nil {
+	if n.IsLeader() {
 		r := n.Raft.Apply(payload, timeout)
 		if r.Error() != nil {
 			return nil, r.Error()
@@ -319,8 +347,11 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 			return nil, err
 		}
 
-		return rsp, nil
+		return rsp,
+			nil
 	}
+
+	log.Printf("transfer to leader")
 
 	return n.ApplyOnLeader(payload)
 }

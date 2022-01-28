@@ -19,8 +19,8 @@ func GetEnvInt(name string, defaultValue int) int {
 	return defaultValue
 }
 
-func RandPort(defaultPort int) int {
-	l, err := net.Listen("tcp", ":0")
+func RandPort(ip string, defaultPort int) int {
+	l, err := net.Listen("tcp", ip+":0")
 	if err != nil {
 		return defaultPort
 	}
@@ -30,8 +30,8 @@ func RandPort(defaultPort int) int {
 	return p
 }
 
-func IsPortFree(port int) bool {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", +port))
+func IsPortFree(ip string, port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", ip, port))
 	if err != nil {
 		return false
 	}
@@ -40,10 +40,10 @@ func IsPortFree(port int) bool {
 	return true
 }
 
-func FindFreePort(port int) int {
-	if IsPortFree(port) {
+func FindFreePort(ip string, port int) int {
+	if IsPortFree(ip, port) {
 		return port
 	}
 
-	return RandPort(port)
+	return RandPort(ip, port)
 }

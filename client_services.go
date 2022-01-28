@@ -20,8 +20,8 @@ type ClientGrpcServices struct {
 }
 
 // ApplyLog responses the request.
-func (s *ClientGrpcServices) ApplyLog(ctx context.Context, request *proto.ApplyRequest) (*proto.ApplyResponse, error) {
-	result := s.Node.Raft.Apply(request.GetRequest(), 0)
+func (s *ClientGrpcServices) ApplyLog(ctx context.Context, r *proto.ApplyRequest) (*proto.ApplyResponse, error) {
+	result := s.Node.Raft.Apply(r.GetRequest(), 0)
 	if result.Error() != nil {
 		return nil, result.Error()
 	}

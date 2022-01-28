@@ -20,6 +20,7 @@ func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 		return nil, errors.New("unknown leader")
 	}
 
+	addr = strings.Replace(addr, "0.0.0.0", "127.0.0.1", 1)
 	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock(), grpc.EmptyDialOption{})
 	if err != nil {
 		return nil, err
@@ -40,8 +41,9 @@ func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 }
 
 // GetPeerDetails returns the remote peer details.
-func GetPeerDetails(address string) (*proto.GetDetailsResponse, error) {
-	c, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(), grpc.EmptyDialOption{})
+func GetPeerDetails(addr string) (*proto.GetDetailsResponse, error) {
+	addr = strings.Replace(addr, "0.0.0.0", "127.0.0.1", 1)
+	c, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock(), grpc.EmptyDialOption{})
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +58,7 @@ func GetPeerDetails(address string) (*proto.GetDetailsResponse, error) {
 }
 
 var (
-	// EnvRport is the raft cluster internal port.
-	EnvRport = util.GetEnvInt("BRAFT_RPORT", util.FindFreePort(15000))
-	// EnvDport is for the raft cluster nodes discovery.
-	EnvDport = util.FindFreePort(util.GetEnvInt("BRAFT_DPORT", EnvRport+1))
-	// EnvHport is used for the http service.
-	EnvHport = util.FindFreePort(util.GetEnvInt("BRAFT_HPORT", EnvDport+1))
+
 	// EnvDiscovery is the discovery method for the raft cluster.
 	// e.g.
 	// static:192.168.1.1,192.168.1.2,192.168.1.3
@@ -112,4 +109,11 @@ var (
 
 		return "0.0.0.0"
 	}()
+
+	// EnvRport is the raft cluster internal port.
+	EnvRport = util.GetEnvInt("BRAFT_RPORT", util.FindFreePort("", 15000))
+	// EnvDport is for the raft cluster nodes discovery.
+	EnvDport = util.FindFreePort("", util.GetEnvInt("BRAFT_DPORT", EnvRport+1))
+	// EnvHport is used for the http service.
+	EnvHport = util.FindFreePort("", util.GetEnvInt("BRAFT_HPORT", EnvDport+1))
 )

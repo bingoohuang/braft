@@ -84,9 +84,10 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 		}
 	}
 	ctx.JSON(http.StatusOK, map[string]interface{}{
-		"Leader":    n.Raft.Leader(),
-		"Nodes":     nodes,
-		"Discovery": n.DiscoveryName(),
+		"Leader":        n.Raft.Leader(),
+		"Nodes":         nodes,
+		"Discovery":     n.DiscoveryName(),
+		"CurrentLeader": n.IsLeader(),
 	})
 }
 
