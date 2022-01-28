@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/bingoohuang/braft/discovery"
-	"github.com/bingoohuang/braft/grpc"
+	"github.com/bingoohuang/braft/proto"
 	"github.com/bingoohuang/braft/util"
-	ggrpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 )
 
 // ApplyOnLeader apply a payload on the leader node.
@@ -20,13 +20,13 @@ func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 	}
 
 	addr = strings.Replace(addr, HostZero, "127.0.0.1", 1)
-	conn, err := ggrpc.Dial(addr, ggrpc.WithInsecure(), ggrpc.WithBlock(), ggrpc.EmptyDialOption{})
+	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock(), grpc.EmptyDialOption{})
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
-	response, err := grpc.NewRaftClient(conn).ApplyLog(context.Background(), &grpc.ApplyRequest{Request: payload})
+	response, err := proto.NewRaftClient(conn).ApplyLog(context.Background(), &proto.ApplyRequest{Request: payload})
 	if err != nil {
 		return nil, err
 	}
@@ -40,15 +40,15 @@ func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 }
 
 // GetPeerDetails returns the remote peer details.
-func GetPeerDetails(address string) (*grpc.GetDetailsResponse, error) {
+func GetPeerDetails(address string) (*proto.GetDetailsResponse, error) {
 	address = strings.Replace(address, HostZero, "127.0.0.1", 1)
-	c, err := ggrpc.Dial(address, ggrpc.WithInsecure(), ggrpc.WithBlock(), ggrpc.EmptyDialOption{})
+	c, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(), grpc.EmptyDialOption{})
 	if err != nil {
 		return nil, err
 	}
 	defer c.Close()
 
-	response, err := grpc.NewRaftClient(c).GetDetails(context.Background(), &grpc.GetDetailsRequest{})
+	response, err := proto.NewRaftClient(c).GetDetails(context.Background(), &proto.GetDetailsRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -71,16 +71,14 @@ var (
 	// static:192.168.1.1:1500,192.168.1.2:1500,192.168.1.3:1500
 	// k8s:svcType=braft;svcBiz=rig
 	// mdns:_braft._tcp
-	EnvDiscovery = os.Getenv("BRAFT_DISCOVERY")
-
-	// EnvDiscoveryMethod is the environment defined discovery method.
-	EnvDiscoveryMethod = func() discovery.Method {
-		s := strings.ToLower(EnvDiscovery)
+	EnvDiscovery = func() discovery.Discovery {
+		env := os.Getenv("BRAFT_DISCOVERY")
+		s := strings.ToLower(os.Getenv("BRAFT_DISCOVERY"))
 		switch {
 		case s == "k8s" || strings.HasPrefix(s, "k8s:"):
 			var serviceLabels map[string]string
 			if strings.HasPrefix(s, "k8s:") {
-				s1 := strings.TrimPrefix(EnvDiscovery, "k8s:")
+				s1 := strings.TrimPrefix(env, "k8s:")
 				serviceLabels = util.ParseStringToMap(s1, ";", ":")
 			}
 			return discovery.NewKubernetesDiscovery("", serviceLabels, "")

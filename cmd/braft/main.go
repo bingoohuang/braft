@@ -44,10 +44,8 @@ func main() {
 	logfmt.RegisterLevelKey("[DEBUG]", logrus.DebugLevel)
 	golog.Setup()
 
-	log.Printf("Starting, rport: %d, dport: %d, hport: %d, discovery: %s",
-		braft.EnvRport, braft.EnvDport, braft.EnvHport, braft.EnvDiscoveryMethod.Name())
-	fsmService := fsm.NewMemMapService()
-	node, err := braft.NewNode(braft.WithServices(fsmService))
+	kvService := fsm.NewMemMapService()
+	node, err := braft.NewNode(braft.WithServices(kvService))
 	if err != nil {
 		log.Fatalf("failed to new node, error: %v", err)
 	}
@@ -57,7 +55,7 @@ func main() {
 	}
 	defer node.Stop()
 
-	go startHTTP(node, braft.EnvHport, fsmService)
+	go startHTTP(node, braft.EnvHport, kvService)
 
 	// wait for interruption/termination
 	sigs := make(chan os.Signal, 1)

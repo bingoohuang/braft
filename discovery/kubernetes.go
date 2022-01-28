@@ -23,7 +23,7 @@ type kubernetesDiscovery struct {
 	stopChan      chan bool
 }
 
-func NewKubernetesDiscovery(namespace string, serviceLabels map[string]string, raftPortName string) Method {
+func NewKubernetesDiscovery(namespace string, serviceLabels map[string]string, raftPortName string) Discovery {
 	if raftPortName == "" {
 		raftPortName = "braft"
 	}

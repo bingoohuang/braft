@@ -4,18 +4,17 @@
 // 	protoc        v3.17.3
 // source: proto/raft.proto
 
-package grpc
+package proto
 
 import (
 	context "context"
-	reflect "reflect"
-	sync "sync"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
@@ -274,8 +273,8 @@ var file_proto_raft_proto_rawDesc = []byte{
 	0x74, 0x44, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x73, 0x12, 0x12, 0x2e, 0x47, 0x65, 0x74, 0x44, 0x65,
 	0x74, 0x61, 0x69, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x13, 0x2e, 0x47,
 	0x65, 0x74, 0x44, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x22, 0x00, 0x42, 0x08, 0x5a, 0x06, 0x2e, 0x2f, 0x67, 0x72, 0x70, 0x63, 0x62, 0x06, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x22, 0x00, 0x42, 0x09, 0x5a, 0x07, 0x2e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -290,16 +289,13 @@ func file_proto_raft_proto_rawDescGZIP() []byte {
 	return file_proto_raft_proto_rawDescData
 }
 
-var (
-	file_proto_raft_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-	file_proto_raft_proto_goTypes  = []interface{}{
-		(*GetDetailsRequest)(nil),  // 0: GetDetailsRequest
-		(*GetDetailsResponse)(nil), // 1: GetDetailsResponse
-		(*ApplyRequest)(nil),       // 2: ApplyRequest
-		(*ApplyResponse)(nil),      // 3: ApplyResponse
-	}
-)
-
+var file_proto_raft_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_raft_proto_goTypes = []interface{}{
+	(*GetDetailsRequest)(nil),  // 0: GetDetailsRequest
+	(*GetDetailsResponse)(nil), // 1: GetDetailsResponse
+	(*ApplyRequest)(nil),       // 2: ApplyRequest
+	(*ApplyResponse)(nil),      // 3: ApplyResponse
+}
 var file_proto_raft_proto_depIdxs = []int32{
 	2, // 0: Raft.ApplyLog:input_type -> ApplyRequest
 	0, // 1: Raft.GetDetails:input_type -> GetDetailsRequest
@@ -388,10 +384,8 @@ func file_proto_raft_proto_init() {
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
-var (
-	_ context.Context
-	_ grpc.ClientConnInterface
-)
+var _ context.Context
+var _ grpc.ClientConnInterface
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
@@ -438,12 +432,12 @@ type RaftServer interface {
 }
 
 // UnimplementedRaftServer can be embedded to have forward compatible implementations.
-type UnimplementedRaftServer struct{}
+type UnimplementedRaftServer struct {
+}
 
 func (*UnimplementedRaftServer) ApplyLog(context.Context, *ApplyRequest) (*ApplyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyLog not implemented")
 }
-
 func (*UnimplementedRaftServer) GetDetails(context.Context, *GetDetailsRequest) (*GetDetailsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDetails not implemented")
 }

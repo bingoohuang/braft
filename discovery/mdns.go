@@ -20,7 +20,7 @@ type mdnsDiscovery struct {
 	stopChan      chan bool
 }
 
-func NewMdnsDiscovery(serviceName string) Method {
+func NewMdnsDiscovery(serviceName string) Discovery {
 	if serviceName == "" {
 		serviceName = "_braft._tcp"
 	}

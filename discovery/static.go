@@ -8,7 +8,7 @@ type staticDiscovery struct {
 	stopChan      chan bool
 }
 
-func NewStaticDiscovery(peers []string) Method {
+func NewStaticDiscovery(peers []string) Discovery {
 	return &staticDiscovery{
 		Peers:         peers,
 		discoveryChan: make(chan string),

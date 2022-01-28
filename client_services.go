@@ -3,7 +3,7 @@ package braft
 import (
 	"context"
 
-	rgrpc "github.com/bingoohuang/braft/grpc"
+	"github.com/bingoohuang/braft/proto"
 )
 
 // NewClientGrpcService creates a new ClientGrpcService.
@@ -16,11 +16,11 @@ func NewClientGrpcService(node *Node) *ClientGrpcServices {
 // ClientGrpcServices is the client of grpc services.
 type ClientGrpcServices struct {
 	Node *Node
-	rgrpc.UnimplementedRaftServer
+	proto.UnimplementedRaftServer
 }
 
 // ApplyLog responses the request.
-func (s *ClientGrpcServices) ApplyLog(ctx context.Context, request *rgrpc.ApplyRequest) (*rgrpc.ApplyResponse, error) {
+func (s *ClientGrpcServices) ApplyLog(ctx context.Context, request *proto.ApplyRequest) (*proto.ApplyResponse, error) {
 	result := s.Node.Raft.Apply(request.GetRequest(), 0)
 	if result.Error() != nil {
 		return nil, result.Error()
@@ -29,12 +29,12 @@ func (s *ClientGrpcServices) ApplyLog(ctx context.Context, request *rgrpc.ApplyR
 	if err != nil {
 		return nil, err
 	}
-	return &rgrpc.ApplyResponse{Response: respPayload}, nil
+	return &proto.ApplyResponse{Response: respPayload}, nil
 }
 
 // GetDetails returns the node details.
-func (s *ClientGrpcServices) GetDetails(context.Context, *rgrpc.GetDetailsRequest) (*rgrpc.GetDetailsResponse, error) {
-	return &rgrpc.GetDetailsResponse{
+func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsRequest) (*proto.GetDetailsResponse, error) {
+	return &proto.GetDetailsResponse{
 		ServerId:      s.Node.ID,
 		RaftState:     s.Node.Raft.State().String(),
 		Leader:        string(s.Node.Raft.Leader()),

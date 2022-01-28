@@ -1,7 +1,7 @@
 package discovery
 
-// Method gives the interface to perform automatic Node discovery
-type Method interface {
+// Discovery gives the interface to perform automatic Node discovery
+type Discovery interface {
 	// Name gives the name of the discovery.
 	Name() string
 

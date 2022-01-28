@@ -16,7 +16,7 @@ import (
 	transport "github.com/Jille/raft-grpc-transport"
 	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/fsm"
-	"github.com/bingoohuang/braft/grpc"
+	"github.com/bingoohuang/braft/proto"
 	"github.com/bingoohuang/braft/serializer"
 	"github.com/bingoohuang/braft/util"
 	"github.com/hashicorp/go-hclog"
@@ -40,59 +40,43 @@ type Node struct {
 	mList            *memberlist.Memberlist
 	stopped          uint32
 	stoppedCh        chan interface{}
-	conf             *NodeConfig
+	conf             *Config
 }
 
-// NodeConfig is the configuration of the node.
-type NodeConfig struct {
-	Serializer      serializer.Serializer
-	DataDir         string
-	DiscoveryMethod discovery.Method
-	Services        []fsm.Service
+// Config is the configuration of the node.
+type Config struct {
+	Serializer serializer.Serializer
+	DataDir    string
+	Discovery  discovery.Discovery
+	Services   []fsm.Service
 }
 
-// NodeConfigFn is the function option pattern for the NodeConfig.
-type NodeConfigFn func(*NodeConfig)
+// ConfigFn is the function option pattern for the NodeConfig.
+type ConfigFn func(*Config)
 
 // WithServices specifies the services for the FSM.
-func WithServices(s ...fsm.Service) NodeConfigFn {
-	return func(c *NodeConfig) {
-		c.Services = s
-	}
-}
+func WithServices(s ...fsm.Service) ConfigFn { return func(c *Config) { c.Services = s } }
 
-// WithDiscoveryMethod specifies the discovery method of raft cluster nodes.
-func WithDiscoveryMethod(s discovery.Method) NodeConfigFn {
-	return func(c *NodeConfig) {
-		c.DiscoveryMethod = s
-	}
-}
+// WithDiscovery specifies the discovery method of raft cluster nodes.
+func WithDiscovery(s discovery.Discovery) ConfigFn { return func(c *Config) { c.Discovery = s } }
 
 // WithDataDir specifies the data directory.
-func WithDataDir(s string) NodeConfigFn {
-	return func(c *NodeConfig) {
-		c.DataDir = s
-	}
-}
+func WithDataDir(s string) ConfigFn { return func(c *Config) { c.DataDir = s } }
 
 // WithSerializer specifies the serializer.Serializer of the raft log messages.
-func WithSerializer(s serializer.Serializer) NodeConfigFn {
-	return func(c *NodeConfig) {
-		c.Serializer = s
-	}
-}
+func WithSerializer(s serializer.Serializer) ConfigFn { return func(c *Config) { c.Serializer = s } }
 
 // NewNode returns an BRaft node.
-func NewNode(fns ...NodeConfigFn) (*Node, error) {
-	nodeConfig := &NodeConfig{}
+func NewNode(fns ...ConfigFn) (*Node, error) {
+	nodeConfig := &Config{}
 	for _, f := range fns {
 		f(nodeConfig)
 	}
 	if nodeConfig.Serializer == nil {
 		nodeConfig.Serializer = serializer.NewMsgPackSerializer()
 	}
-	if nodeConfig.DiscoveryMethod == nil {
-		nodeConfig.DiscoveryMethod = EnvDiscoveryMethod
+	if nodeConfig.Discovery == nil {
+		nodeConfig.Discovery = EnvDiscovery
 	}
 
 	if nodeConfig.DataDir == "" {
@@ -117,7 +101,7 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 	raftConf := raft.DefaultConfig()
 	raftConf.LocalID = raft.ServerID(nodeID)
 	raftConf.LogLevel = hclog.Info.String()
-	raftConf.Logger = &nodeLogger{}
+	raftConf.Logger = &logger{}
 
 	stableStoreFile := filepath.Join(nodeConfig.DataDir, "store.boltdb")
 	if util.FileExists(stableStoreFile) {
@@ -173,7 +157,7 @@ func NewNode(fns ...NodeConfigFn) (*Node, error) {
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
 func (n *Node) Start() (chan interface{}, error) {
-	log.Print("Starting Node...")
+	log.Printf("Starting Node, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
 
@@ -208,10 +192,10 @@ func (n *Node) Start() (chan interface{}, error) {
 	n.TransportManager.Register(grpcServer)
 
 	// register client services
-	grpc.RegisterRaftServer(grpcServer, NewClientGrpcService(n))
+	proto.RegisterRaftServer(grpcServer, NewClientGrpcService(n))
 
 	// discovery method
-	discoveryChan, err := n.conf.DiscoveryMethod.Start(n.ID, n.RaftPort)
+	discoveryChan, err := n.conf.Discovery.Start(n.ID, n.RaftPort)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +224,7 @@ func (n *Node) Start() (chan interface{}, error) {
 
 // DiscoveryName returns the name of discovery.
 func (n *Node) DiscoveryName() string {
-	return n.conf.DiscoveryMethod.Name()
+	return n.conf.Discovery.Name()
 }
 
 // Stop stops the node and notifies on stopped channel returned in Start.
@@ -250,7 +234,7 @@ func (n *Node) Stop() {
 	}
 
 	log.Print("Stopping Node...")
-	n.conf.DiscoveryMethod.Stop()
+	n.conf.Discovery.Stop()
 	if err := n.mList.Leave(10 * time.Second); err != nil {
 		log.Printf("Failed to leave from discovery: %q", err.Error())
 	}
@@ -309,7 +293,7 @@ func (n *Node) NotifyJoin(node *memberlist.Node) {
 // NotifyLeave triggered when a Node becomes unavailable after a period of time
 // it will remove the unavailable Node from the Raft cluster
 func (n *Node) NotifyLeave(node *memberlist.Node) {
-	if !n.conf.DiscoveryMethod.SupportsNodeAutoRemoval() {
+	if !n.conf.Discovery.SupportsNodeAutoRemoval() {
 		return
 	}
 
@@ -349,11 +333,11 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 	return n.ApplyOnLeader(payload)
 }
 
-// nodeLogger adapters nodeLogger to LevelLogger.
-type nodeLogger struct{}
+// logger adapters logger to LevelLogger.
+type logger struct{}
 
 // Log Emit a message and key/value pairs at a provided log level
-func (l *nodeLogger) Log(level hclog.Level, msg string, args ...interface{}) {
+func (l *logger) Log(level hclog.Level, msg string, args ...interface{}) {
 	switch {
 	case level <= hclog.Debug:
 		log.Printf("D! "+msg, args...)
@@ -366,42 +350,24 @@ func (l *nodeLogger) Log(level hclog.Level, msg string, args ...interface{}) {
 	}
 }
 
-// Trace Emit a message and key/value pairs at the TRACE level
-func (l *nodeLogger) Trace(msg string, args ...interface{}) {
-	l.Log(hclog.Trace, msg, args...)
-}
+func (l *logger) Trace(msg string, args ...interface{}) { l.Log(hclog.Trace, msg, args...) }
+func (l *logger) Debug(msg string, args ...interface{}) { l.Log(hclog.Debug, msg, args...) }
+func (l *logger) Info(msg string, args ...interface{})  { l.Log(hclog.Info, msg, args...) }
+func (l *logger) Warn(msg string, args ...interface{})  { l.Log(hclog.Warn, msg, args...) }
+func (l *logger) Error(msg string, args ...interface{}) { l.Log(hclog.Error, msg, args...) }
 
-// Debug Emit a message and key/value pairs at the DEBUG level
-func (l *nodeLogger) Debug(msg string, args ...interface{}) {
-	l.Log(hclog.Debug, msg, args...)
-}
+func (l *logger) IsTrace() bool { return false }
+func (l *logger) IsDebug() bool { return false }
+func (l *logger) IsInfo() bool  { return false }
+func (l *logger) IsWarn() bool  { return false }
+func (l *logger) IsError() bool { return false }
 
-// Info Emit a message and key/value pairs at the INFO level
-func (l *nodeLogger) Info(msg string, args ...interface{}) {
-	l.Log(hclog.Info, msg, args...)
-}
+func (l *logger) ImpliedArgs() []interface{}            { return nil }
+func (l *logger) With(args ...interface{}) hclog.Logger { return l }
+func (l *logger) Name() string                          { return "" }
+func (l *logger) Named(name string) hclog.Logger        { return l }
+func (l *logger) ResetNamed(name string) hclog.Logger   { return l }
+func (l *logger) SetLevel(level hclog.Level)            {}
 
-// Warn Emit a message and key/value pairs at the WARN level
-func (l *nodeLogger) Warn(msg string, args ...interface{}) {
-	l.Log(hclog.Warn, msg, args...)
-}
-
-// Error Emit a message and key/value pairs at the ERROR level
-func (l *nodeLogger) Error(msg string, args ...interface{}) {
-	l.Log(hclog.Error, msg, args...)
-}
-
-func (l *nodeLogger) IsTrace() bool                         { return false }
-func (l *nodeLogger) IsDebug() bool                         { return false }
-func (l *nodeLogger) IsInfo() bool                          { return false }
-func (l *nodeLogger) IsWarn() bool                          { return false }
-func (l *nodeLogger) IsError() bool                         { return false }
-func (l *nodeLogger) ImpliedArgs() []interface{}            { return nil }
-func (l *nodeLogger) With(args ...interface{}) hclog.Logger { return l }
-func (l *nodeLogger) Name() string                          { return "" }
-func (l *nodeLogger) Named(name string) hclog.Logger        { return l }
-func (l *nodeLogger) ResetNamed(name string) hclog.Logger   { return l }
-func (l *nodeLogger) SetLevel(level hclog.Level)            {}
-
-func (l *nodeLogger) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger { return nil }
-func (l *nodeLogger) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer   { return nil }
+func (l *logger) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger { return nil }
+func (l *logger) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer   { return nil }
