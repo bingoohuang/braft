@@ -68,18 +68,18 @@ func (d *mdnsDiscovery) discovery() {
 		for {
 			select {
 			case <-d.stopChan:
-				break
+				return
 			case entry := <-entries:
 				d.discoveryChan <- fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
 			}
 		}
 	}()
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	for {
 		select {
 		case <-d.stopChan:
-			cancel()
-			break
+			return
 		default:
 			err = resolver.Browse(ctx, d.serviceName, "local.", entries)
 			if err != nil {
@@ -94,7 +94,7 @@ func (d *mdnsDiscovery) exposeMDNS() (*zeroconf.Server, error) {
 	return zeroconf.Register(d.nodeID, d.serviceName, "local.", d.nodePort, []string{"txtv=0", "lo=1", "la=2"}, nil)
 }
 
-func (d *mdnsDiscovery) SupportsNodeAutoRemoval() bool { return true }
+func (d *mdnsDiscovery) IsStatic() bool { return false }
 
 func (d *mdnsDiscovery) Stop() {
 	d.stopChan <- true

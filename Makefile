@@ -27,7 +27,7 @@ git.commit:
 	echo ${gitCommit} > git.commit
 
 tool:
-	go get github.com/securego/gosec/cmd/gosec
+	go install github.com/securego/gosec/cmd/gosec@latest
 	go install github.com/golang/protobuf/protoc-gen-go@latest
 
 sec:

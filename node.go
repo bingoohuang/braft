@@ -310,7 +310,7 @@ func (n *Node) NotifyJoin(node *memberlist.Node) {
 // NotifyLeave triggered when a Node becomes unavailable after a period of time
 // it will remove the unavailable Node from the Raft cluster
 func (n *Node) NotifyLeave(node *memberlist.Node) {
-	if !n.conf.Discovery.SupportsNodeAutoRemoval() {
+	if n.conf.Discovery.IsStatic() {
 		return
 	}
 

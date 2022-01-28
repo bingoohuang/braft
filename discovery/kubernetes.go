@@ -119,5 +119,5 @@ func (k *kubernetesDiscovery) findPort(pod v1.Pod) (p v1.ContainerPort) {
 	return p
 }
 
-func (k *kubernetesDiscovery) SupportsNodeAutoRemoval() bool { return true }
-func (k *kubernetesDiscovery) Stop()                         { k.stopChan <- true }
+func (k *kubernetesDiscovery) IsStatic() bool { return false }
+func (k *kubernetesDiscovery) Stop()          { k.stopChan <- true }

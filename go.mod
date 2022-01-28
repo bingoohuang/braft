@@ -25,7 +25,11 @@ require (
 require (
 	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
+	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/securego/gosec v0.0.0-20200401082031-e946c8c39989 // indirect
+	golang.org/x/mod v0.4.2 // indirect
+	golang.org/x/tools v0.1.5 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
 
