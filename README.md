@@ -68,3 +68,97 @@ BRAFT_IF|specify the IF name| N/A | `export BRAFT_IF=eth0`
 BRAFT_RPORT|specify the raft port| 15000 | `export BRAFT_RPORT=15000`
 BRAFT_DPORT|specify the discovery port| BRAFT_RPORT+1 | `export BRAFT_DPORT=15001`
 BRAFT_HPORT|specify the http port| BRAFT_DPORT+1 | `export BRAFT_HPORT=15002`
+
+
+## demo
+
+
+```sh
+$ gurl :15002/raft
+GET /raft? HTTP/1.1
+Host: localhost:15002
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+User-Agent: gurl/0.1.0
+
+
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Fri, 28 Jan 2022 10:12:23 GMT
+Content-Length: 1644
+
+{
+  "CurrentLeader": true,
+  "Discovery": "mdns:_braft._tcp",
+  "Leader": "192.168.162.88:15000",
+  "Nodes": [
+    {
+      "Leader": "192.168.162.88:15000",
+      "ServerID": "hqJJRLsyNEsxeWM4ZUw2T3pMM0xDaUk1MHFaNGZFTE2lUnBvcnTNOpilRHBvcnTNOpmlSHBvcnTNOpqoSG9zdG5hbWWlYm9nb26iSVCUrjE5Mi4xNjguMTYyLjg4rjE5Mi4xNjguMjE3LjE5qzE3Mi4xNi42Ny4xrTE5Mi4xNjguMjI4LjE",
+      "Address": "192.168.162.88:15000",
+      "RaftState": "Leader",
+      "RaftPort": 15000,
+      "DiscoveryPort": 15001,
+      "HTTPPort": 15002,
+      "RaftID": {
+        "ID": "24K1yc8eL6OzL3LCiI50qZ4fELM",
+        "Rport": 15000,
+        "Dport": 15001,
+        "Hport": 15002,
+        "Hostname": "bogon",
+        "IP": [
+          "192.168.162.88",
+          "192.168.217.19",
+          "172.16.67.1",
+          "192.168.228.1"
+        ]
+      }
+    },
+    {
+      "Leader": "192.168.162.88:15000",
+      "ServerID": "hqJJRLsyNEsxelYzcjJMeXZ3MmkzWmQxNTQ2TmtFcWmlUnBvcnTN3_2lRHBvcnTN3_6lSHBvcnTN3_-oSG9zdG5hbWWlYm9nb26iSVCUrjE5Mi4xNjguMTYyLjg4rjE5Mi4xNjguMjE3LjE5qzE3Mi4xNi42Ny4xrTE5Mi4xNjguMjI4LjE",
+      "Address": "192.168.217.19:57341",
+      "RaftState": "Follower",
+      "RaftPort": 57341,
+      "DiscoveryPort": 57342,
+      "HTTPPort": 57343,
+      "RaftID": {
+        "ID": "24K1zV3r2Lyvw2i3Zd1546NkEqi",
+        "Rport": 57341,
+        "Dport": 57342,
+        "Hport": 57343,
+        "Hostname": "bogon",
+        "IP": [
+          "192.168.162.88",
+          "192.168.217.19",
+          "172.16.67.1",
+          "192.168.228.1"
+        ]
+      }
+    },
+    {
+      "Leader": "192.168.162.88:15000",
+      "ServerID": "hqJJRLsyNEsyMDJNcGZ5d1BNNk1aOTEzSkhyeUVJb3WlUnBvcnTN4BqlRHBvcnTN4BulSHBvcnTN4ByoSG9zdG5hbWWlYm9nb26iSVCUrjE5Mi4xNjguMTYyLjg4rjE5Mi4xNjguMjE3LjE5qzE3Mi4xNi42Ny4xrTE5Mi4xNjguMjI4LjE",
+      "Address": "192.168.217.19:57370",
+      "RaftState": "Follower",
+      "RaftPort": 57370,
+      "DiscoveryPort": 57371,
+      "HTTPPort": 57372,
+      "RaftID": {
+        "ID": "24K202MpfywPM6MZ913JHryEIou",
+        "Rport": 57370,
+        "Dport": 57371,
+        "Hport": 57372,
+        "Hostname": "bogon",
+        "IP": [
+          "192.168.162.88",
+          "192.168.217.19",
+          "172.16.67.1",
+          "192.168.228.1"
+        ]
+      }
+    }
+  ]
+}
+```
