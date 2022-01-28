@@ -1,6 +1,7 @@
 package braft
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/golog/pkg/ginlogrus"
 	"github.com/gin-gonic/gin"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // HTTPConfig is configuration for HTTP service.
@@ -66,6 +68,7 @@ type RaftNode struct {
 	RaftPort      int32
 	DiscoveryPort int32
 	HTTPPort      int32
+	RaftID        RaftID
 }
 
 // ServeRaft services the the raft http api.
@@ -76,7 +79,11 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 			log.Printf("GetPeerDetails error: %v", err)
 			nodes = append(nodes, RaftNode{Address: string(server.Address), Error: err.Error()})
 		} else {
+			var rid RaftID
+			data, _ := base64.RawURLEncoding.DecodeString(rsp.ServerId)
+			msgpack.Unmarshal(data, &rid)
 			nodes = append(nodes, RaftNode{
+				RaftID:  rid,
 				Address: string(server.Address), Leader: rsp.Leader,
 				ServerID: rsp.ServerId, RaftState: rsp.RaftState,
 				RaftPort: rsp.RaftPort, HTTPPort: rsp.HttpPort, DiscoveryPort: rsp.DiscoveryPort,

@@ -11,7 +11,6 @@ import (
 )
 
 type mdnsDiscovery struct {
-	delayTime     time.Duration
 	nodeID        string
 	serviceName   string
 	nodePort      int
@@ -25,9 +24,8 @@ func NewMdnsDiscovery(serviceName string) Discovery {
 		serviceName = "_braft._tcp"
 	}
 	rand.Seed(time.Now().UnixNano())
-	delayTime := time.Duration(rand.Intn(5)+1) * time.Second
+
 	return &mdnsDiscovery{
-		delayTime:     delayTime,
 		nodeID:        "",
 		serviceName:   serviceName,
 		nodePort:      0,
@@ -46,6 +44,9 @@ func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) 
 	}
 	d.nodeID, d.nodePort = nodeID, nodePort
 	go d.discovery()
+
+	// 防止各个节点同时启动太快，随机休眠
+	time.Sleep(time.Duration(rand.Intn(500)+500) * time.Millisecond)
 	return d.discoveryChan, nil
 }
 
@@ -84,7 +85,7 @@ func (d *mdnsDiscovery) discovery() {
 			if err != nil {
 				log.Printf("Error during mDNS lookup: %v", err)
 			}
-			time.Sleep(d.delayTime)
+			time.Sleep(time.Duration(rand.Intn(5)+1) * time.Second)
 		}
 	}
 }
