@@ -31,7 +31,6 @@ import (
 type Node struct {
 	ID               string
 	RaftPort         int
-	DiscoveryPort    int
 	address          string
 	Raft             *raft.Raft
 	GrpcServer       *ggrpc.Server
@@ -127,10 +126,10 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	sm.Init(nodeConfig.Serializer)
 
 	// memberlist config
-	mlConfig := memberlist.DefaultWANConfig()
-	mlConfig.BindPort = EnvDport
-	mlConfig.Name = fmt.Sprintf("%s:%d", nodeID, EnvRport)
-	mlConfig.Logger = log.Default()
+	discoveryConfig := memberlist.DefaultWANConfig()
+	discoveryConfig.BindPort = EnvDport
+	discoveryConfig.Name = fmt.Sprintf("%s:%d", nodeID, EnvRport)
+	discoveryConfig.Logger = log.Default()
 
 	// default raft config
 	addr := fmt.Sprintf("%s:%d", HostZero, EnvRport)
@@ -150,14 +149,13 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 		Raft:             raftServer,
 		TransportManager: t,
 		conf:             nodeConfig,
-		DiscoveryPort:    EnvDport,
-		discoveryConfig:  mlConfig,
+		discoveryConfig:  discoveryConfig,
 	}, nil
 }
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
 func (n *Node) Start() (chan interface{}, error) {
-	log.Printf("Starting Node, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
+	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
 
@@ -185,14 +183,13 @@ func (n *Node) Start() (chan interface{}, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	grpcServer := ggrpc.NewServer()
-	n.GrpcServer = grpcServer
+	n.GrpcServer = ggrpc.NewServer()
 
 	// register management services
-	n.TransportManager.Register(grpcServer)
+	n.TransportManager.Register(n.GrpcServer)
 
 	// register client services
-	proto.RegisterRaftServer(grpcServer, NewClientGrpcService(n))
+	proto.RegisterRaftServer(n.GrpcServer, NewClientGrpcService(n))
 
 	// discovery method
 	discoveryChan, err := n.conf.Discovery.Start(n.ID, n.RaftPort)
@@ -203,7 +200,7 @@ func (n *Node) Start() (chan interface{}, error) {
 
 	// serve grpc
 	go func() {
-		if err := grpcServer.Serve(grpcListen); err != nil {
+		if err := n.GrpcServer.Serve(grpcListen); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -216,7 +213,7 @@ func (n *Node) Start() (chan interface{}, error) {
 		n.Stop()
 	}()
 
-	log.Printf("Node started on port %d and discovery port %d", n.RaftPort, n.DiscoveryPort)
+	log.Printf("Node started")
 	n.stoppedCh = make(chan interface{})
 
 	return n.stoppedCh, nil
