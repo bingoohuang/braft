@@ -17,6 +17,7 @@ type mdnsDiscovery struct {
 	mdnsServer    *zeroconf.Server
 	discoveryChan chan string
 	stopChan      chan bool
+	tempQueue     []string
 }
 
 func NewMdnsDiscovery(serviceName string) Discovery {
@@ -50,6 +51,10 @@ func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) 
 	return d.discoveryChan, nil
 }
 
+func (k *mdnsDiscovery) Search() (dest []string, err error) { return k.tempQueue, nil }
+
+const maxQueueSize = 10
+
 func (d *mdnsDiscovery) discovery() {
 	// expose mdns server
 	mdnsServer, err := d.exposeMDNS()
@@ -70,7 +75,13 @@ func (d *mdnsDiscovery) discovery() {
 			case <-d.stopChan:
 				return
 			case entry := <-entries:
-				d.discoveryChan <- fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
+				value := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
+				d.discoveryChan <- value
+				d.tempQueue = append(d.tempQueue, value)
+				if len(d.tempQueue) > maxQueueSize {
+					copy(d.tempQueue, d.tempQueue[1:])
+					d.tempQueue = d.tempQueue[:maxQueueSize]
+				}
 			}
 		}
 	}()
@@ -81,8 +92,7 @@ func (d *mdnsDiscovery) discovery() {
 		case <-d.stopChan:
 			return
 		default:
-			err = resolver.Browse(ctx, d.serviceName, "local.", entries)
-			if err != nil {
+			if err = resolver.Browse(ctx, d.serviceName, "local.", entries); err != nil {
 				log.Printf("Error during mDNS lookup: %v", err)
 			}
 			time.Sleep(time.Duration(rand.Intn(5)+1) * time.Second)

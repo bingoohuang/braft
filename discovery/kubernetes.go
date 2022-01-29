@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	core "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -21,6 +21,8 @@ type kubernetesDiscovery struct {
 	portName      string
 	discoveryChan chan string
 	stopChan      chan bool
+
+	clientSet *kubernetes.Clientset
 }
 
 func NewKubernetesDiscovery(namespace string, serviceLabels map[string]string, raftPortName string) Discovery {
@@ -56,59 +58,70 @@ func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
 	if err != nil {
 		return nil, err
 	}
-	kc, err := kubernetes.NewForConfig(cc)
-	if err != nil {
+	if k.clientSet, err = kubernetes.NewForConfig(cc); err != nil {
 		return nil, err
 	}
-	go k.discovery(kc)
+	go k.discovery()
 	return k.discoveryChan, nil
 }
 
-func (k *kubernetesDiscovery) discovery(kc *kubernetes.Clientset) {
+func (k *kubernetesDiscovery) discovery() {
 	for {
 		select {
 		case <-k.stopChan:
 			return
 		default:
-			k.search(kc)
+			k.search()
 			time.Sleep(time.Duration(rand.Intn(5)+1) * time.Second)
 		}
 	}
 }
 
-func (k *kubernetesDiscovery) search(clientSet *kubernetes.Clientset) {
-	services, err := clientSet.CoreV1().Services(k.namespace).List(context.Background(),
-		metav1.ListOptions{
+func (k *kubernetesDiscovery) search() {
+	result, err := k.Search()
+	if err != nil {
+		log.Printf("search k8s error: %v", err)
+	}
+
+	for _, item := range result {
+		k.discoveryChan <- item
+	}
+}
+
+func (k *kubernetesDiscovery) Search() (dest []string, err error) {
+	services, err := k.clientSet.CoreV1().Services(k.namespace).List(context.Background(),
+		meta.ListOptions{
 			LabelSelector: labels.SelectorFromSet(k.serviceLabels).String(),
 			Watch:         false,
 		})
 	if err != nil {
-		log.Println(err)
-		return
+		return nil, err
 	}
 
 	for _, svc := range services.Items {
 		set := labels.Set(svc.Spec.Selector)
-		listOptions := metav1.ListOptions{
+		listOptions := meta.ListOptions{
 			LabelSelector: labels.SelectorFromSet(set).String(),
 		}
-		pods, err := clientSet.CoreV1().Pods(svc.Namespace).List(context.Background(), listOptions)
+		pods, err := k.clientSet.CoreV1().Pods(svc.Namespace).List(context.Background(), listOptions)
 		if err != nil {
-			log.Println(err)
-			continue
+			return dest, err
 		}
+
 		for _, pod := range pods.Items {
 			if strings.ToLower(string(pod.Status.Phase)) == "running" {
 				raftPort := k.findPort(pod)
 				if podIp := pod.Status.PodIP; podIp != "" && raftPort.ContainerPort > 0 {
-					k.discoveryChan <- fmt.Sprintf("%v:%v", podIp, raftPort.ContainerPort)
+					dest = append(dest, fmt.Sprintf("%v:%v", podIp, raftPort.ContainerPort))
 				}
 			}
 		}
 	}
+
+	return dest, nil
 }
 
-func (k *kubernetesDiscovery) findPort(pod v1.Pod) (p v1.ContainerPort) {
+func (k *kubernetesDiscovery) findPort(pod core.Pod) (p core.ContainerPort) {
 	for _, container := range pod.Spec.Containers {
 		for _, port := range container.Ports {
 			if port.Name == k.portName {

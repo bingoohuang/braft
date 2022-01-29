@@ -14,6 +14,10 @@ func NewStaticDiscovery(peers []string) Discovery {
 	}
 }
 
+func (k *staticDiscovery) Search() (dest []string, err error) {
+	return k.Peers, nil
+}
+
 // Name gives the name of the discovery.
 func (d *staticDiscovery) Name() string { return "static:" + strings.Join(d.Peers, ",") }
 

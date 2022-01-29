@@ -2,8 +2,11 @@ package braft
 
 import (
 	"context"
+	"errors"
 
+	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/proto"
+	"github.com/hashicorp/go-multierror"
 )
 
 // NewClientGrpcService creates a new ClientGrpcService.
@@ -32,14 +35,31 @@ func (s *ClientGrpcServices) ApplyLog(ctx context.Context, r *proto.ApplyRequest
 	return &proto.ApplyResponse{Response: respPayload}, nil
 }
 
+// ErrNone is the a special error which means no error occurred.
+var ErrNone = errors.New("")
+
 // GetDetails returns the node details.
 func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsRequest) (*proto.GetDetailsResponse, error) {
+	var resultErr error
+	var discoveryNodes []string
+	if search, ok := s.Node.conf.Discovery.(discovery.Searchable); ok {
+		nodes, err := search.Search()
+		if err != nil {
+			resultErr = multierror.Append(resultErr, err)
+		}
+		discoveryNodes = nodes
+	}
+	if resultErr == nil {
+		resultErr = ErrNone
+	}
 	return &proto.GetDetailsResponse{
-		ServerId:      s.Node.ID,
-		RaftState:     s.Node.Raft.State().String(),
-		Leader:        string(s.Node.Raft.Leader()),
-		DiscoveryPort: int32(EnvDport),
-		HttpPort:      int32(EnvHport),
-		RaftPort:      int32(EnvRport),
+		ServerId:       s.Node.ID,
+		RaftState:      s.Node.Raft.State().String(),
+		Leader:         string(s.Node.Raft.Leader()),
+		DiscoveryPort:  int32(EnvDport),
+		HttpPort:       int32(EnvHport),
+		RaftPort:       int32(EnvRport),
+		Error:          resultErr.Error(),
+		DiscoveryNodes: discoveryNodes,
 	}, nil
 }

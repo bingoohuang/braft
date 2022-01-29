@@ -15,3 +15,7 @@ type Discovery interface {
 	// Stop should stop the discovery method and all of its goroutines, it should close discovery channel returned in Start
 	Stop()
 }
+
+type Searchable interface {
+	Search() (dest []string, err error)
+}

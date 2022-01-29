@@ -60,15 +60,16 @@ func getQuery(ctx *gin.Context, k ...string) string {
 
 // RaftNode is a node info of raft cluster.
 type RaftNode struct {
-	Error         string `json:",omitempty"`
-	Leader        string
-	ServerID      string
-	Address       string
-	RaftState     string
-	RaftPort      int32
-	DiscoveryPort int32
-	HTTPPort      int32
-	RaftID        RaftID
+	Error          string `json:",omitempty"`
+	Leader         string
+	ServerID       string
+	Address        string
+	RaftState      string
+	RaftPort       int32
+	DiscoveryPort  int32
+	HTTPPort       int32
+	RaftID         RaftID
+	DiscoveryNodes []string
 }
 
 // ServeRaft services the the raft http api.
@@ -87,9 +88,12 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 				Address: string(server.Address), Leader: rsp.Leader,
 				ServerID: rsp.ServerId, RaftState: rsp.RaftState,
 				RaftPort: rsp.RaftPort, HTTPPort: rsp.HttpPort, DiscoveryPort: rsp.DiscoveryPort,
+				Error:          rsp.Error,
+				DiscoveryNodes: rsp.DiscoveryNodes,
 			})
 		}
 	}
+
 	ctx.JSON(http.StatusOK, map[string]interface{}{
 		"Leader":        n.Raft.Leader(),
 		"Nodes":         nodes,

@@ -17,6 +17,8 @@ message GetDetailsResponse {
     int32 raftPort = 4;
     int32 discoveryPort = 5;
 	int32 httpPort = 6;
+    string error = 7;
+    repeated string discoveryNodes = 8;
 }
 
 message ApplyRequest {
