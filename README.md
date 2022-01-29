@@ -62,7 +62,7 @@ func main() {
 NAME | USAGE | DEFAULT | EXAMPELE
 ---|---|---|---
 GOLOG_STDOUT| print log on stdout| N/A| `export GOLOG_STDOUT=true`
-BRAFT_DISCOVERY| discovery configuration |mdns:_braft._tcp | <p>mdns:_braft._tcp</p><p>static:192.168.1.1,192.168.1.2,192.168.1.3</p><p>k8s:svcType=braft;svcBiz=rig</p>
+BRAFT_DISCOVERY| discovery configuration |mdns:_braft._tcp | <p>mdns:_braft._tcp</p><p>static:192.168.1.1,192.168.1.2,192.168.1.3</p><p>k8s</p>
 BRAFT_IP|specify the IP| first host IP | `export BRAFT_IP=192.168.1.1`
 BRAFT_IF|specify the IF name| N/A | `export BRAFT_IF=eth0`
 BRAFT_RPORT|specify the raft port| 15000 | `export BRAFT_RPORT=15000`

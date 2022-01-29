@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/bingoohuang/braft/util"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -25,18 +27,11 @@ type kubernetesDiscovery struct {
 	clientSet *kubernetes.Clientset
 }
 
-func NewKubernetesDiscovery(namespace string, serviceLabels map[string]string, raftPortName string) Discovery {
-	if raftPortName == "" {
-		raftPortName = "braft"
-	}
-	if len(serviceLabels) == 0 {
-		serviceLabels = map[string]string{"svcType": "braft"}
-	}
-
+func NewKubernetesDiscovery() Discovery {
 	return &kubernetesDiscovery{
-		namespace:     namespace,
-		serviceLabels: serviceLabels,
-		portName:      raftPortName,
+		namespace:     os.Getenv("K8S_NAMESPACE"),
+		serviceLabels: util.ParseStringToMap(os.Getenv("K8S_LABELS"), ",", ":"),
+		portName:      os.Getenv("K8S_PORTNAME"),
 		discoveryChan: make(chan string),
 		stopChan:      make(chan bool),
 	}

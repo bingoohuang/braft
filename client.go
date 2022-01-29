@@ -65,16 +65,10 @@ var (
 	// k8s:svcType=braft;svcBiz=rig
 	// mdns:_braft._tcp
 	EnvDiscovery = func() discovery.Discovery {
-		env := os.Getenv("BRAFT_DISCOVERY")
 		s := strings.ToLower(os.Getenv("BRAFT_DISCOVERY"))
 		switch {
-		case s == "k8s" || strings.HasPrefix(s, "k8s:"):
-			var serviceLabels map[string]string
-			if strings.HasPrefix(s, "k8s:") {
-				s1 := strings.TrimPrefix(env, "k8s:")
-				serviceLabels = util.ParseStringToMap(s1, ";", ":")
-			}
-			return discovery.NewKubernetesDiscovery("", serviceLabels, "")
+		case s == "k8s":
+			return discovery.NewKubernetesDiscovery()
 		case s == "mdns" || s == "" || strings.HasPrefix(s, "mdns:"):
 			if strings.HasPrefix(s, "mdns:") {
 				s = strings.TrimPrefix(s, "mdns:")
