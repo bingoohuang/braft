@@ -122,7 +122,7 @@ func (k *kubernetesDiscovery) Search() (dest []string, err error) {
 			log.Printf("pod phase: %s, pod iP: %s", phase, podIp)
 			if phase == core.PodRunning && podIp != "" {
 				if p := k.findPort(pod); p.ContainerPort > 0 {
-					dest = append(dest, fmt.Sprintf("%v:%v", podIp, p.ContainerPort))
+					dest = append(dest, fmt.Sprintf("%v", podIp))
 				}
 			}
 		}
