@@ -3,6 +3,7 @@ package braft
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/proto"
@@ -61,5 +62,7 @@ func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsReques
 		RaftPort:       int32(EnvRport),
 		Error:          resultErr.Error(),
 		DiscoveryNodes: discoveryNodes,
+		StartTime:      s.Node.StartTime.Format(time.RFC3339Nano),
+		Duration:       time.Since(s.Node.StartTime).String(),
 	}, nil
 }

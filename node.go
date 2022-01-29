@@ -41,6 +41,8 @@ type Node struct {
 	mList            *memberlist.Memberlist
 	stopped          uint32
 	conf             *Config
+
+	StartTime time.Time
 }
 
 // Config is the configuration of the node.
@@ -181,6 +183,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
 func (n *Node) Start() error {
+	n.StartTime = time.Now()
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)

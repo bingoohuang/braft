@@ -19,6 +19,8 @@ message GetDetailsResponse {
 	int32 httpPort = 6;
     string error = 7;
     repeated string discoveryNodes = 8;
+     string startTime = 9;
+     string duration = 10;
 }
 
 message ApplyRequest {

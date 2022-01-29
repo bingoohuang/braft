@@ -70,6 +70,8 @@ type RaftNode struct {
 	HTTPPort       int32
 	RaftID         RaftID
 	DiscoveryNodes []string
+	StartTime      string
+	Duration       string
 }
 
 // ServeRaft services the the raft http api.
@@ -90,6 +92,8 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 				RaftPort: rsp.RaftPort, HTTPPort: rsp.HttpPort, DiscoveryPort: rsp.DiscoveryPort,
 				Error:          rsp.Error,
 				DiscoveryNodes: rsp.DiscoveryNodes,
+				StartTime:      rsp.StartTime,
+				Duration:       rsp.Duration,
 			})
 		}
 	}
