@@ -10,7 +10,7 @@ kind: Role
 metadata:
   labels:
     cattle.io/creator: footstone
-  name: bjca-footstone-raft-admin
+  name: bjca-footstone-braft-demo
   namespace: footstone-common
 rules:
   - apiGroups:
@@ -31,7 +31,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: bjca-footstone-raft-role
+  name: bjca-footstone-braft-demo
 subjects:
   - kind: ServiceAccount
     name: braftdemo
