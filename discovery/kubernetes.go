@@ -55,6 +55,8 @@ func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
 	if k.clientSet, err = kubernetes.NewForConfig(cc); err != nil {
 		return nil, err
 	}
+	// do a search at first.
+	k.search(true)
 	go k.discovery()
 	return k.discoveryChan, nil
 }
@@ -64,26 +66,36 @@ func (k *kubernetesDiscovery) discovery() {
 		select {
 		case <-k.stopChan:
 			return
-		default:
-			k.search()
-			time.Sleep(time.Duration(rand.Intn(5)+1) * time.Second)
+		case <-time.After(time.Duration(rand.Intn(5)+1) * time.Second):
+			k.search(false)
 		}
 	}
 }
 
-func (k *kubernetesDiscovery) search() {
+func (k *kubernetesDiscovery) search(gorun bool) {
 	result, err := k.Search()
 	if err != nil {
 		log.Printf("search k8s error: %v", err)
 	}
 
-	for _, item := range result {
-		k.discoveryChan <- item
+	f := func() {
+		for _, item := range result {
+			k.discoveryChan <- item
+		}
+	}
+
+	if gorun {
+		go f()
+	} else {
+		f()
 	}
 }
 
 func (k *kubernetesDiscovery) Search() (dest []string, err error) {
 	log.Printf("search services with namespace: %s, labels: %v", k.namespace, k.serviceLabels)
+	start := time.Now()
+	defer log.Printf("search completed with cost %s", time.Since(start))
+
 	services, err := k.clientSet.CoreV1().Services(k.namespace).List(context.Background(),
 		meta.ListOptions{
 			LabelSelector: labels.SelectorFromSet(k.serviceLabels).String(),
