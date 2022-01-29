@@ -37,7 +37,7 @@ func NewMdnsDiscovery(serviceName string) Discovery {
 }
 
 // Name gives the name of the discovery.
-func (d *mdnsDiscovery) Name() string { return "mdns:" + d.serviceName }
+func (d *mdnsDiscovery) Name() string { return "mdns://" + d.serviceName }
 
 func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) {
 	if len(nodeID) > 27 {

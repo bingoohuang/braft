@@ -19,7 +19,7 @@ func (k *staticDiscovery) Search() (dest []string, err error) {
 }
 
 // Name gives the name of the discovery.
-func (d *staticDiscovery) Name() string { return "static:" + strings.Join(d.Peers, ",") }
+func (d *staticDiscovery) Name() string { return "static://" + strings.Join(d.Peers, ",") }
 
 func (d *staticDiscovery) Stop() {}
 
