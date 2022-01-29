@@ -3,7 +3,6 @@ package braft
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 
 	"github.com/bingoohuang/braft/discovery"
@@ -65,7 +64,7 @@ var (
 	// k8s:svcType=braft;svcBiz=rig
 	// mdns:_braft._tcp
 	EnvDiscovery = func() discovery.Discovery {
-		s := strings.ToLower(os.Getenv("BRAFT_DISCOVERY"))
+		s := strings.ToLower(util.Env("BRAFT_DISCOVERY", "BDI"))
 		switch {
 		case s == "k8s":
 			return discovery.NewKubernetesDiscovery()
@@ -88,12 +87,12 @@ var (
 	// 2. network interface by env $BRAFT_IF (like, export BRAFT_IF=eth0,en0)
 	// 3. all zero ip: 0.0.0.0
 	EnvIP = func() string {
-		if env := os.Getenv("BRAFT_IP"); env != "" {
+		if env := util.Env("BRAFT_IP", "BIP"); env != "" {
 			return env
 		}
 
 		var ifaces []string
-		if env := os.Getenv("BRAFT_IF"); env != "" {
+		if env := util.Env("BRAFT_IF", "BIF"); env != "" {
 			ifaces = append(ifaces, strings.Split(env, ",")...)
 		}
 
@@ -105,9 +104,9 @@ var (
 	}()
 
 	// EnvRport is the raft cluster internal port.
-	EnvRport = util.GetEnvInt("BRAFT_RPORT", util.FindFreePort("", 15000))
+	EnvRport = util.Atoi(util.Env("BRAFT_RPORT", "BRP"), util.FindFreePort("", 15000))
 	// EnvDport is for the raft cluster nodes discovery.
-	EnvDport = util.FindFreePort("", util.GetEnvInt("BRAFT_DPORT", EnvRport+1))
+	EnvDport = util.Atoi(util.Env("BRAFT_DPORT", "BDP"), EnvRport+1)
 	// EnvHport is used for the http service.
-	EnvHport = util.FindFreePort("", util.GetEnvInt("BRAFT_HPORT", EnvDport+1))
+	EnvHport = util.Atoi(util.Env("BRAFT_HPORT", "BHP"), EnvDport+1)
 )

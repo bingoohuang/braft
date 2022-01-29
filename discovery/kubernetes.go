@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"os"
 	"strings"
 	"time"
 
@@ -29,9 +28,9 @@ type kubernetesDiscovery struct {
 
 func NewKubernetesDiscovery() Discovery {
 	return &kubernetesDiscovery{
-		namespace:     os.Getenv("K8S_NAMESPACE"),
-		serviceLabels: util.ParseStringToMap(os.Getenv("K8S_LABELS"), ",", ":"),
-		portName:      os.Getenv("K8S_PORTNAME"),
+		namespace:     util.Env("K8S_NAMESPACE", "K8N"),
+		serviceLabels: util.ParseStringToMap(util.Env("K8S_LABELS", "K8L"), ",", ":"),
+		portName:      util.Env("K8S_PORTNAME", "K8P"),
 		discoveryChan: make(chan string),
 		stopChan:      make(chan bool),
 	}
@@ -45,7 +44,7 @@ func (d *kubernetesDiscovery) Name() string {
 		labels = append(labels, k+":"+v)
 	}
 
-	return "k8s:ns=" + d.namespace + ",labels=" + strings.Join(labels, "&")
+	return "k8s:ns=" + d.namespace + ",labels=" + strings.Join(labels, "&") + ",portName=" + d.portName
 }
 
 func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {

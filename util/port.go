@@ -7,16 +7,22 @@ import (
 	"strconv"
 )
 
-func GetEnvInt(name string, defaultValue int) int {
-	if s := os.Getenv(name); s != "" {
-		if a, err := strconv.Atoi(s); err != nil {
-			return defaultValue
-		} else {
-			return a
+func Env(name ...string) string {
+	for _, n := range name {
+		if v := os.Getenv(n); v != "" {
+			return v
 		}
 	}
 
-	return defaultValue
+	return ""
+}
+
+func Atoi(v string, defaultValue int) int {
+	if a, err := strconv.Atoi(v); err != nil {
+		return defaultValue
+	} else {
+		return a
+	}
 }
 
 func RandPort(ip string, defaultPort int) int {
