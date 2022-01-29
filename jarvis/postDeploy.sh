@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 
-export GOPROXY=https://goproxy.cn
 make bin=braft jarvis
-
-tar -cvzf ROOT.tar.gz braft
-
+mkdir -p build
+cp braft ./build && cp jarvis/* ./build
 mkdir -p output
-
-mv ROOT.tar.gz output/
-cp jarvis/* output/
+cd build && tar -cvzf ../output/ROOT.tar.gz *
