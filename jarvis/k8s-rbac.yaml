@@ -16,7 +16,8 @@ rules:
   - apiGroups:
     - '*'
     resources:
-    - 'pods'
+    - "pods"
+    - "services"
     verbs:
     - "get"
     - "watch"
