@@ -1,6 +1,7 @@
 package util
 
 import (
+	"sort"
 	"strings"
 )
 
@@ -10,6 +11,22 @@ func Or(a, b string) string {
 	}
 
 	return a
+}
+
+func MapToString(m map[string]string, kkSep, kvSep string) string {
+	var items []string
+	var ks []string
+	for k := range m {
+		ks = append(ks, k)
+	}
+
+	sort.Strings(ks)
+
+	for _, k := range ks {
+		items = append(items, k+kvSep+m[k])
+	}
+
+	return strings.Join(items, kkSep)
 }
 
 func ParseStringToMap(s, kkSep, kvSep string) map[string]string {

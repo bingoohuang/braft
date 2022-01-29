@@ -2,10 +2,8 @@ package discovery
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/bingoohuang/braft/util"
@@ -38,13 +36,9 @@ func NewKubernetesDiscovery() Discovery {
 
 // Name gives the name of the discovery.
 func (d *kubernetesDiscovery) Name() string {
-	var labels []string
-
-	for k, v := range d.serviceLabels {
-		labels = append(labels, k+":"+v)
-	}
-
-	return "k8s:ns=" + d.namespace + ",labels=" + strings.Join(labels, "&") + ",portName=" + d.portName
+	return "k8s:ns=" + d.namespace +
+		"&labels=" + util.MapToString(d.serviceLabels, ",", ":") +
+		"&portName=" + d.portName
 }
 
 func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
@@ -92,9 +86,9 @@ func (k *kubernetesDiscovery) search(gorun bool) {
 }
 
 func (k *kubernetesDiscovery) Search() (dest []string, err error) {
-	log.Printf("search services with namespace: %s, labels: %v", k.namespace, k.serviceLabels)
+	log.Printf("[L:1m] search services with namespace: %s, labels: %v", k.namespace, k.serviceLabels)
 	start := time.Now()
-	defer log.Printf("search completed with cost %s", time.Since(start))
+	defer log.Printf("[L:1m] search completed with cost %s", time.Since(start))
 
 	services, err := k.clientSet.CoreV1().Services(k.namespace).List(context.Background(),
 		meta.ListOptions{
@@ -117,12 +111,11 @@ func (k *kubernetesDiscovery) Search() (dest []string, err error) {
 		}
 
 		for _, pod := range pods.Items {
-			phase := pod.Status.Phase
-			podIp := pod.Status.PodIP
-			log.Printf("pod phase: %s, pod iP: %s", phase, podIp)
-			if phase == core.PodRunning && podIp != "" {
+			if pod.Status.Phase == core.PodRunning {
+				podIp := pod.Status.PodIP
+				log.Printf("[L:1m] pod phase: %s, pod iP: %s", pod.Status.Phase, podIp)
 				if p := k.findPort(pod); p.ContainerPort > 0 {
-					dest = append(dest, fmt.Sprintf("%v", podIp))
+					dest = append(dest, podIp)
 				}
 			}
 		}
@@ -134,7 +127,7 @@ func (k *kubernetesDiscovery) Search() (dest []string, err error) {
 func (k *kubernetesDiscovery) findPort(pod core.Pod) (p core.ContainerPort) {
 	for _, container := range pod.Spec.Containers {
 		for _, port := range container.Ports {
-			log.Printf("port: %+v", port)
+			log.Printf("[L:1m] port: %+v", port)
 			if k.portName == "" || port.Name == k.portName {
 				return port
 			}
