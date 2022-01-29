@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: braftdemo
+  namespace: footstone-common
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    cattle.io/creator: footstone
+  name: bjca-footstone-raft-admin
+  namespace: footstone-common
+rules:
+  - apiGroups:
+    - '*'
+    resources:
+    - 'pods'
+    verbs:
+    - "get"
+    - "watch"
+    - "list"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bjca-raft-bindings-footstone
+  namespace: footstone-common
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bjca-footstone-raft-role
+subjects:
+  - kind: ServiceAccount
+    name: braftdemo
+    namespace: footstone-common

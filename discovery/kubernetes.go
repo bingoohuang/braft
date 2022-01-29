@@ -27,7 +27,7 @@ type kubernetesDiscovery struct {
 func NewKubernetesDiscovery() Discovery {
 	return &kubernetesDiscovery{
 		namespace:     util.Env("K8S_NAMESPACE", "K8N"),
-		serviceLabels: util.ParseStringToMap(util.Env("K8S_LABELS", "K8L"), ",", ":"),
+		serviceLabels: util.ParseStringToMap(util.Env("K8S_LABELS", "K8L"), ",", "="),
 		portName:      util.Env("K8S_PORTNAME", "K8P"),
 		discoveryChan: make(chan string),
 		stopChan:      make(chan bool),
@@ -37,11 +37,13 @@ func NewKubernetesDiscovery() Discovery {
 // Name gives the name of the discovery.
 func (d *kubernetesDiscovery) Name() string {
 	return "k8s://ns=" + d.namespace +
-		"/labels=" + util.MapToString(d.serviceLabels, ",", ":") +
+		"/labels=" + util.MapToString(d.serviceLabels, ",", "=") +
 		"/portName=" + d.portName
 }
 
 func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
+	util.Sleep(util.Env("K8S_SLEEP"), time.Duration(rand.Intn(15)+15)*time.Second)
+
 	cc, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err

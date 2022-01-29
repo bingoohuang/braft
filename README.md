@@ -59,19 +59,21 @@ func main() {
 
 ## env VARIABLES
 
-NAME | USAGE | DEFAULT | EXAMPELE
+NAME | ACRONYM | USAGE | DEFAULT | EXAMPELE
 ---|---|---|---
-GOLOG_STDOUT| print log on stdout| N/A| `export GOLOG_STDOUT=true`
-BRAFT_DISCOVERY| discovery configuration |mdns:_braft._tcp | <p>mdns:_braft._tcp</p><p>static:192.168.1.1,192.168.1.2,192.168.1.3</p><p>k8s</p>
-BRAFT_IP|specify the IP| first host IP | `export BRAFT_IP=192.168.1.1`
-BRAFT_IF|specify the IF name| N/A | `export BRAFT_IF=eth0`
-BRAFT_RPORT|specify the raft port| 15000 | `export BRAFT_RPORT=15000`
-BRAFT_DPORT|specify the discovery port| BRAFT_RPORT+1 | `export BRAFT_DPORT=15001`
-BRAFT_HPORT|specify the http port| BRAFT_DPORT+1 | `export BRAFT_HPORT=15002`
-
+GOLOG_STDOUT|N/A| print log on stdout| N/A| `export GOLOG_STDOUT=true`
+BRAFT_DISCOVERY| BDI| discovery configuration |mdns:_braft._tcp | <p>mdns:_braft._tcp</p><p>static:192.168.1.1,192.168.1.2,192.168.1.3</p><p>k8s</p>
+BRAFT_IP|BIP|specify the IP| first host IP | `export BRAFT_IP=192.168.1.1`
+BRAFT_IF|BIF|specify the IF name| N/A | `export BRAFT_IF=eth0`
+BRAFT_RPORT|BRP|specify the raft port| 15000 | `export BRAFT_RPORT=15000`
+BRAFT_DPORT|BDP|specify the discovery port| BRAFT_RPORT+1 | `export BRAFT_DPORT=15001`
+BRAFT_HPORT|BHP|specify the http port| BRAFT_DPORT+1 | `export BRAFT_HPORT=15002`
+K8S_NAMESPACE|K8N| k8s namespace | (empty)| `export K8S_NAMESPACE=prod`
+K8S_LABELS|K8L| service labels | (empty)| `export K8S_LABELS=svc=braft`
+K8S_PORTNAME|K8P| container tcp port name | (empty)| `export K8S_PORTNAME=http`
+K8S_SLEEP|N/A| k8s discovery sleep before start | (empty)| `export K8S_SLEEP=30-50s`
 
 ## demo
-
 
 ```sh
 $ gurl :15002/raft
