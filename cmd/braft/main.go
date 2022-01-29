@@ -31,11 +31,13 @@ func (a Arg) VersionInfo() string { return v.Version() }
 func main() {
 	c := &Arg{}
 	flagparse.Parse(c)
-	if sleep, _ := time.ParseDuration(util.Env("SLEEP")); sleep > 0 {
-		time.Sleep(sleep)
-	}
 
 	golog.Setup()
+
+	if sleep, _ := time.ParseDuration(util.Env("SLEEP")); sleep > 0 {
+		log.Printf("sleeping for %s", sleep)
+		time.Sleep(sleep)
+	}
 
 	node, err := braft.NewNode()
 	if err != nil {
