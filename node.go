@@ -33,6 +33,7 @@ import (
 // Node is the raft cluster node.
 type Node struct {
 	ID               string
+	RaftID           RaftID
 	addr             string
 	Raft             *raft.Raft
 	GrpcServer       *ggrpc.Server
@@ -173,6 +174,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 
 	return &Node{
 		ID:               nodeID,
+		RaftID:           raftID,
 		addr:             fmt.Sprintf(":%d", EnvRport),
 		Raft:             raftServer,
 		TransportManager: t,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bingoohuang/braft/fsm"
@@ -113,6 +114,9 @@ func (n *Node) ServeKV(ctx *gin.Context) {
 		MapName: util.Or(getQuery(ctx, "map", "m"), "default"),
 		Key:     util.Or(getQuery(ctx, "key", "k"), "default"),
 	}
+	ctx.Header("Braft-IP", strings.Join(n.RaftID.IP, ","))
+	ctx.Header("Braft-ID", n.RaftID.ID)
+	ctx.Header("Braft-Host", n.RaftID.Hostname)
 	switch ctx.Request.Method {
 	case http.MethodPost:
 		req.Operate = fsm.OperateSet
