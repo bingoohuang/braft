@@ -1,4 +1,4 @@
-.PHONY: test install
+.PHONY: test install jarvis
 all: test install
 
 app=$(notdir $(shell pwd))
