@@ -83,12 +83,14 @@ func (k *kubernetesDiscovery) search() {
 }
 
 func (k *kubernetesDiscovery) Search() (dest []string, err error) {
+	log.Printf("search services with namespace: %s, labels: %v", k.namespace, k.serviceLabels)
 	services, err := k.clientSet.CoreV1().Services(k.namespace).List(context.Background(),
 		meta.ListOptions{
 			LabelSelector: labels.SelectorFromSet(k.serviceLabels).String(),
 			Watch:         false,
 		})
 	if err != nil {
+		log.Printf("search services error: %v", err)
 		return nil, err
 	}
 
@@ -103,10 +105,13 @@ func (k *kubernetesDiscovery) Search() (dest []string, err error) {
 		}
 
 		for _, pod := range pods.Items {
-			if strings.ToLower(string(pod.Status.Phase)) == "running" {
-				raftPort := k.findPort(pod)
-				if podIp := pod.Status.PodIP; podIp != "" && raftPort.ContainerPort > 0 {
-					dest = append(dest, fmt.Sprintf("%v:%v", podIp, raftPort.ContainerPort))
+			phase := pod.Status.Phase
+			log.Printf("pod phase: %s, pod iP: %s", phase, pod.Status.PodIP)
+			if phase == core.PodRunning {
+				if podIp := pod.Status.PodIP; podIp != "" {
+					if p := k.findPort(pod); p.ContainerPort > 0 {
+						dest = append(dest, fmt.Sprintf("%v:%v", podIp, p.ContainerPort))
+					}
 				}
 			}
 		}
@@ -118,6 +123,7 @@ func (k *kubernetesDiscovery) Search() (dest []string, err error) {
 func (k *kubernetesDiscovery) findPort(pod core.Pod) (p core.ContainerPort) {
 	for _, container := range pod.Spec.Containers {
 		for _, port := range container.Ports {
+			log.Printf("port: %+v", port)
 			if port.Name == k.portName {
 				return port
 			}
