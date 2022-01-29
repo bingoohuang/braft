@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/bingoohuang/braft"
+	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/flagparse"
 	"github.com/bingoohuang/gg/pkg/v"
 	"github.com/bingoohuang/golog"
@@ -29,6 +31,9 @@ func (a Arg) VersionInfo() string { return v.Version() }
 func main() {
 	c := &Arg{}
 	flagparse.Parse(c)
+	if sleep, _ := time.ParseDuration(util.Env("SLEEP")); sleep > 0 {
+		time.Sleep(sleep)
+	}
 
 	golog.Setup()
 
