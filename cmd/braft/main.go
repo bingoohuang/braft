@@ -8,6 +8,7 @@ import (
 	"github.com/bingoohuang/braft"
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/flagparse"
+	"github.com/bingoohuang/gg/pkg/thinktime"
 	"github.com/bingoohuang/gg/pkg/v"
 	"github.com/bingoohuang/golog"
 )
@@ -34,9 +35,10 @@ func main() {
 
 	golog.Setup()
 
-	if sleep, _ := time.ParseDuration(util.Env("SLEEP")); sleep > 0 {
-		log.Printf("sleeping for %s", sleep)
-		time.Sleep(sleep)
+	if tt, _ := thinktime.ParseThinkTime(util.Env("THINK_TIME")); tt != nil {
+		sleeping := tt.Think(false)
+		log.Printf("sleeping for %s", sleeping)
+		time.Sleep(sleeping)
 	}
 
 	node, err := braft.NewNode()
