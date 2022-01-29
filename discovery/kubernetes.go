@@ -106,12 +106,11 @@ func (k *kubernetesDiscovery) Search() (dest []string, err error) {
 
 		for _, pod := range pods.Items {
 			phase := pod.Status.Phase
-			log.Printf("pod phase: %s, pod iP: %s", phase, pod.Status.PodIP)
-			if phase == core.PodRunning {
-				if podIp := pod.Status.PodIP; podIp != "" {
-					if p := k.findPort(pod); p.ContainerPort > 0 {
-						dest = append(dest, fmt.Sprintf("%v:%v", podIp, p.ContainerPort))
-					}
+			podIp := pod.Status.PodIP
+			log.Printf("pod phase: %s, pod iP: %s", phase, podIp)
+			if phase == core.PodRunning && podIp != "" {
+				if p := k.findPort(pod); p.ContainerPort > 0 {
+					dest = append(dest, fmt.Sprintf("%v:%v", podIp, p.ContainerPort))
 				}
 			}
 		}
@@ -124,7 +123,7 @@ func (k *kubernetesDiscovery) findPort(pod core.Pod) (p core.ContainerPort) {
 	for _, container := range pod.Spec.Containers {
 		for _, port := range container.Ports {
 			log.Printf("port: %+v", port)
-			if port.Name == k.portName {
+			if k.portName == "" || port.Name == k.portName {
 				return port
 			}
 		}
