@@ -185,6 +185,9 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 func (n *Node) Start() error {
 	n.StartTime = time.Now()
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
+
+	util.EnvSleep()
+
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
 

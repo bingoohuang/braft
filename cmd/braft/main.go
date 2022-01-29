@@ -3,12 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/bingoohuang/braft"
-	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/flagparse"
-	"github.com/bingoohuang/gg/pkg/thinktime"
 	"github.com/bingoohuang/gg/pkg/v"
 	"github.com/bingoohuang/golog"
 )
@@ -34,12 +31,6 @@ func main() {
 	flagparse.Parse(c)
 
 	golog.Setup()
-
-	if tt, _ := thinktime.ParseThinkTime(util.Env("THINK_TIME")); tt != nil {
-		sleeping := tt.Think(false)
-		log.Printf("sleeping for %s", sleeping)
-		time.Sleep(sleeping)
-	}
 
 	node, err := braft.NewNode()
 	if err != nil {
