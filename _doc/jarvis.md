@@ -3,6 +3,7 @@
 
 postRelease.sh 文件中注意：
 
+1. namespace 要对应上， `--namespace footstone-common` 与 命令行中的 `K8N=footstone-common`
 1. `--src braft` 参数需要与 jarvis 中的 “项目编码(英文)” 对应
 1. `--port 15002` 内部端口，`--nodePort 30010` 外部端口
 1. `--cmd "K8S_SLEEP=30-50s BDI=k8s K8L=svc=braft ./braft"` 指定启动命令，环境变量见 braft README 中的 k8s 节点发现部分
