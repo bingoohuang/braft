@@ -60,7 +60,7 @@ func main() {
 ## env VARIABLES
 
 NAME | ACRONYM | USAGE | DEFAULT | EXAMPELE
----|---|---|---
+---|---|---|---|---
 GOLOG_STDOUT|N/A| print log on stdout| N/A| `export GOLOG_STDOUT=true`
 BRAFT_DISCOVERY| BDI| discovery configuration |mdns:_braft._tcp | <p>mdns:_braft._tcp</p><p>static:192.168.1.1,192.168.1.2,192.168.1.3</p><p>k8s</p>
 BRAFT_IP|BIP|specify the IP| first host IP | `export BRAFT_IP=192.168.1.1`

@@ -14,7 +14,8 @@ metadata:
   namespace: footstone-common
 rules:
   - apiGroups:
-    - '*'
+    - "*"
+    - ""
     resources:
     - "pods"
     - "services"
