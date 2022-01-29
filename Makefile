@@ -23,8 +23,8 @@ goinstall2 = go install -trimpath -ldflags='${flags2}' ./...
 # https://stackoverflow.com/questions/2826029/passing-additional-variables-from-command-line-to-make
 # make bin=bar target
 binName := $(if $(bin),$(bin),$(shell basename "$$PWD"))
-gobuild1 = go build -trimpath -ldflags='${flags1}' -o ${binName} cmd/${app}/main.go
-gobuild2 = go build -trimpath -ldflags='${flags2}' -o ${binName} cmd/${app}/main.go
+gobuild1 = go build -trimpath -ldflags='${flags1}' -o ${binName} cmd/braft/main.go
+gobuild2 = go build -trimpath -ldflags='${flags2}' -o ${binName} cmd/braft/main.go
 gobin := $(shell go env GOBIN)
 # try $GOPATN/bin if $gobin is empty
 gobin := $(if $(gobin),$(gobin),$(shell go env GOPATH)/bin)
