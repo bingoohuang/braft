@@ -8,16 +8,13 @@ import (
 	"github.com/bingoohuang/gg/pkg/thinktime"
 )
 
-// Sleep sleeps for a duration by envValue.
-func Sleep(envValue string, defaultSleep time.Duration) {
-	sleeping := defaultSleep
-	if tt, _ := thinktime.ParseThinkTime(envValue); tt != nil {
-		sleeping = tt.Think(false)
-	}
-
-	if sleeping > 0 {
-		log.Printf("sleeping for %s", sleeping)
-		time.Sleep(sleeping)
+// Think sleeps for a duration by envValue.
+func Think(thinkTime string) {
+	if tt, _ := thinktime.ParseThinkTime(thinkTime); tt != nil {
+		if sleeping := tt.Think(false); sleeping > 0 {
+			log.Printf("sleeping for thinkTime %s", sleeping)
+			time.Sleep(sleeping)
+		}
 	}
 }
 

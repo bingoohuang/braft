@@ -7,6 +7,7 @@ import (
 
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/randx"
+	"github.com/bingoohuang/gg/pkg/ss"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -42,7 +43,7 @@ func (d *kubernetesDiscovery) Name() string {
 }
 
 func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
-	util.Sleep(util.Env("K8S_SLEEP"), time.Duration(randx.IntBetween(15, 30))*time.Second)
+	util.Think(ss.Or(util.Env("K8S_SLEEP"), "15-30s"))
 
 	cc, err := rest.InClusterConfig()
 	if err != nil {

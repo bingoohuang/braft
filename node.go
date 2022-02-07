@@ -19,7 +19,7 @@ import (
 	"github.com/bingoohuang/braft/serializer"
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/goip"
-	"github.com/bingoohuang/gg/pkg/randx"
+	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/golog/pkg/logfmt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
@@ -189,7 +189,7 @@ func (n *Node) Start() error {
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
 
 	// 防止各个节点同时启动太快，随机休眠
-	util.Sleep(util.Env("BRAFT_SLEEP", "BSL"), time.Duration(randx.IntBetween(100, 3000))*time.Millisecond)
+	util.Think(ss.Or(util.Env("BRAFT_SLEEP", "BSL"), "100ms-3s"))
 
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
