@@ -194,13 +194,6 @@ func (n *Node) Start() error {
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
 
-	// discovery method
-	discoveryChan, err := n.conf.Discovery.Start(n.ID, EnvRport)
-	if err != nil {
-		return err
-	}
-	go n.handleDiscoveredNodes(discoveryChan)
-
 	// raft server
 	configuration := raft.Configuration{
 		Servers: []raft.Server{
@@ -234,6 +227,13 @@ func (n *Node) Start() error {
 	proto.RegisterRaftServer(n.GrpcServer, NewClientGrpcService(n))
 
 	logfmt.RegisterLevelKey("[DEBUG]", logrus.DebugLevel)
+
+	// discovery method
+	discoveryChan, err := n.conf.Discovery.Start(n.ID, EnvRport)
+	if err != nil {
+		return err
+	}
+	go n.handleDiscoveredNodes(discoveryChan)
 
 	// serve grpc
 	go func() {
@@ -299,10 +299,9 @@ func (n *Node) handleDiscoveredNodes(discoveryChan chan string) {
 			}
 
 			peerAddr := fmt.Sprintf("%s:%d", peerHost, rsp.DiscoveryPort)
+			log.Printf("join to cluster using discovery address: %s", peerAddr)
 			if _, err = n.mList.Join([]string{peerAddr}); err != nil {
 				log.Printf("W! failed to join to cluster using discovery address: %s", peerAddr)
-			} else {
-				log.Printf("joined to cluster using discovery address: %s", peerAddr)
 			}
 		}
 	}
