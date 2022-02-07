@@ -10,6 +10,7 @@ import (
 
 	"github.com/bingoohuang/braft/fsm"
 	"github.com/bingoohuang/braft/util"
+	"github.com/bingoohuang/gg/pkg/v"
 	"github.com/bingoohuang/golog/pkg/ginlogrus"
 	"github.com/gin-gonic/gin"
 	"github.com/vmihailenco/msgpack/v5"
@@ -73,6 +74,10 @@ type RaftNode struct {
 	DiscoveryNodes []string
 	StartTime      string
 	Duration       string
+	GitCommit      string
+	BuildTime      string
+	GoVersion      string
+	AppVersion     string
 }
 
 // ServeRaft services the the raft http api.
@@ -95,6 +100,10 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 				DiscoveryNodes: rsp.DiscoveryNodes,
 				StartTime:      rsp.StartTime,
 				Duration:       rsp.Duration,
+				GitCommit:      v.GitCommit,
+				BuildTime:      v.BuildTime,
+				GoVersion:      v.GoVersion,
+				AppVersion:     v.AppVersion,
 			})
 		}
 	}
