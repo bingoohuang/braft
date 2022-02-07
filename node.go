@@ -188,7 +188,8 @@ func (n *Node) Start() error {
 	n.StartTime = time.Now()
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
 
-	util.Sleep(util.Env("BRAFT_SLEEP", "BSL"), time.Duration(randx.IntBetween(150, 1000))*time.Millisecond)
+	// 防止各个节点同时启动太快，随机休眠
+	util.Sleep(util.Env("BRAFT_SLEEP", "BSL"), time.Duration(randx.IntBetween(100, 3000))*time.Millisecond)
 
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)

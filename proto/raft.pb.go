@@ -8,13 +8,14 @@ package proto
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -328,13 +329,16 @@ func file_proto_raft_proto_rawDescGZIP() []byte {
 	return file_proto_raft_proto_rawDescData
 }
 
-var file_proto_raft_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_proto_raft_proto_goTypes = []interface{}{
-	(*GetDetailsRequest)(nil),  // 0: GetDetailsRequest
-	(*GetDetailsResponse)(nil), // 1: GetDetailsResponse
-	(*ApplyRequest)(nil),       // 2: ApplyRequest
-	(*ApplyResponse)(nil),      // 3: ApplyResponse
-}
+var (
+	file_proto_raft_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+	file_proto_raft_proto_goTypes  = []interface{}{
+		(*GetDetailsRequest)(nil),  // 0: GetDetailsRequest
+		(*GetDetailsResponse)(nil), // 1: GetDetailsResponse
+		(*ApplyRequest)(nil),       // 2: ApplyRequest
+		(*ApplyResponse)(nil),      // 3: ApplyResponse
+	}
+)
+
 var file_proto_raft_proto_depIdxs = []int32{
 	2, // 0: Raft.ApplyLog:input_type -> ApplyRequest
 	0, // 1: Raft.GetDetails:input_type -> GetDetailsRequest
@@ -423,8 +427,10 @@ func file_proto_raft_proto_init() {
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConnInterface
+var (
+	_ context.Context
+	_ grpc.ClientConnInterface
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
@@ -471,12 +477,12 @@ type RaftServer interface {
 }
 
 // UnimplementedRaftServer can be embedded to have forward compatible implementations.
-type UnimplementedRaftServer struct {
-}
+type UnimplementedRaftServer struct{}
 
 func (*UnimplementedRaftServer) ApplyLog(context.Context, *ApplyRequest) (*ApplyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyLog not implemented")
 }
+
 func (*UnimplementedRaftServer) GetDetails(context.Context, *GetDetailsRequest) (*GetDetailsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDetails not implemented")
 }

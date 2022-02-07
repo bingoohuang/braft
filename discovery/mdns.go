@@ -43,8 +43,6 @@ func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) 
 	d.nodeID, d.nodePort = nodeID, nodePort
 	go d.discovery()
 
-	// 防止各个节点同时启动太快，随机休眠
-	util.RandSleep(100*time.Millisecond, 1*time.Second, true)
 	return d.discoveryChan, nil
 }
 

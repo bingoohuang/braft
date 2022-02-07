@@ -65,9 +65,10 @@ jarvis:
 install: init
 	${goinstall1}
 	upx ${gobin}/${app}
-linux: init
+linux: init fmt
 	GOOS=linux GOARCH=amd64 ${goinstall1}
 	upx ${gobin}/linux_amd64/${app}
+	bssh -H rt16,rt18,rt182 scp ~/go/bin/linux_amd64/braft r:/usr/bin
 arm: init
 	GOOS=linux GOARCH=arm64 ${goinstall1}
 	upx ${gobin}/linux_arm64/${app}
