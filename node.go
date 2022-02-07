@@ -294,11 +294,15 @@ func (n *Node) handleDiscoveredNodes(discoveryChan chan string) {
 		}
 
 		if rsp, err := GetPeerDetails(peer); err == nil {
-			if !n.findPeerServer(peer, rsp.ServerId) {
-				peerAddr := fmt.Sprintf("%s:%d", peerHost, rsp.DiscoveryPort)
-				if _, err = n.mList.Join([]string{peerAddr}); err != nil {
-					log.Printf("failed to join to cluster using discovery address: %s", peerAddr)
-				}
+			if n.findPeerServer(peer, rsp.ServerId) {
+				continue
+			}
+
+			peerAddr := fmt.Sprintf("%s:%d", peerHost, rsp.DiscoveryPort)
+			if _, err = n.mList.Join([]string{peerAddr}); err != nil {
+				log.Printf("W! failed to join to cluster using discovery address: %s", peerAddr)
+			} else {
+				log.Printf("joined to cluster using discovery address: %s", peerAddr)
 			}
 		}
 	}

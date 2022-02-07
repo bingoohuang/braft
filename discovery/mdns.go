@@ -37,11 +37,7 @@ func NewMdnsDiscovery(serviceName string) Discovery {
 func (d *mdnsDiscovery) Name() string { return "mdns://" + d.serviceName }
 
 func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) {
-	if len(nodeID) > 27 {
-		nodeID = nodeID[:27]
-	}
-	d.nodeID, d.nodePort = nodeID, nodePort
-
+	d.nodeID, d.nodePort = ss.Left(nodeID, 27), nodePort
 	d.ctx, d.cancel = context.WithCancel(context.Background())
 
 	go d.discovery()
