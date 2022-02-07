@@ -22,7 +22,10 @@ func Sleep(envValue string, defaultSleep time.Duration) {
 }
 
 // RandSleep sleeps for a random duration.
-func RandSleep(min, max time.Duration) {
-	randPart := time.Duration(randx.IntBetween(int(min), int(max)))
-	time.Sleep(randPart + min)
+func RandSleep(min, max time.Duration, printLog bool) {
+	sleeping := time.Duration(randx.IntBetween(int(min), int(max)))
+	if printLog {
+		log.Printf("sleeping for %s", sleeping)
+	}
+	time.Sleep(sleeping)
 }

@@ -44,7 +44,7 @@ func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) 
 	go d.discovery()
 
 	// 防止各个节点同时启动太快，随机休眠
-	util.RandSleep(500*time.Millisecond, 1*time.Second)
+	util.RandSleep(100*time.Millisecond, 1*time.Second, true)
 	return d.discoveryChan, nil
 }
 
@@ -88,7 +88,7 @@ func (d *mdnsDiscovery) discovery() {
 			if err = resolver.Browse(ctx, d.serviceName, "local.", entries); err != nil {
 				log.Printf("Error during mDNS lookup: %v", err)
 			}
-			util.RandSleep(time.Second, 5*time.Second)
+			util.RandSleep(time.Second, 5*time.Second, false)
 		}
 	}
 }
