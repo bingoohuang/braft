@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/bingoohuang/braft"
 	"github.com/bingoohuang/gg/pkg/flagparse"
@@ -18,9 +19,9 @@ type Arg struct {
 // Usage is optional for customized show.
 func (a Arg) Usage() string {
 	return fmt.Sprintf(`
-Usage of goup:
+Usage of %s:
   -v    bool   show version
-  -init bool   create init ctl shell script`)
+  -init bool   create init ctl shell script`, os.Args[0])
 }
 
 // VersionInfo is optional for customized version.
