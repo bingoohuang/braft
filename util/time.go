@@ -7,11 +7,11 @@ import (
 	"github.com/bingoohuang/gg/pkg/thinktime"
 )
 
-func Sleep(env string, defaultSleep time.Duration) {
+// Sleep sleeps for a duration by envValue.
+func Sleep(envValue string, defaultSleep time.Duration) {
 	sleeping := defaultSleep
-	if tt, _ := thinktime.ParseThinkTime(env); tt != nil {
+	if tt, _ := thinktime.ParseThinkTime(envValue); tt != nil {
 		sleeping = tt.Think(false)
-
 	}
 
 	if sleeping > 0 {

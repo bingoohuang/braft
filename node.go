@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
@@ -29,6 +30,10 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 	ggrpc "google.golang.org/grpc"
 )
+
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
 
 // Node is the raft cluster node.
 type Node struct {
@@ -187,6 +192,8 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 func (n *Node) Start() error {
 	n.StartTime = time.Now()
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
+
+	util.Sleep(util.Env("BRAFT_SLEEP", "BSL"), time.Duration(rand.Intn(1000)+150)*time.Millisecond)
 
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
