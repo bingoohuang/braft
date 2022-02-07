@@ -17,8 +17,9 @@ type mdnsDiscovery struct {
 	nodePort      int
 	mdnsServer    *zeroconf.Server
 	discoveryChan chan string
-	stopChan      chan bool
 	tempQueue     *util.UniqueQueue
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
 func NewMdnsDiscovery(serviceName string) Discovery {
@@ -28,7 +29,6 @@ func NewMdnsDiscovery(serviceName string) Discovery {
 		nodePort:      0,
 		mdnsServer:    &zeroconf.Server{},
 		discoveryChan: make(chan string),
-		stopChan:      make(chan bool),
 		tempQueue:     util.NewUniqueQueue(100),
 	}
 }
@@ -41,6 +41,9 @@ func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) 
 		nodeID = nodeID[:27]
 	}
 	d.nodeID, d.nodePort = nodeID, nodePort
+
+	d.ctx, d.cancel = context.WithCancel(context.Background())
+
 	go d.discovery()
 
 	return d.discoveryChan, nil
@@ -65,7 +68,7 @@ func (d *mdnsDiscovery) discovery() {
 	go func() {
 		for {
 			select {
-			case <-d.stopChan:
+			case <-d.ctx.Done():
 				return
 			case entry := <-entries:
 				if entry != nil {
@@ -76,14 +79,13 @@ func (d *mdnsDiscovery) discovery() {
 			}
 		}
 	}()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
 	for {
 		select {
-		case <-d.stopChan:
+		case <-d.ctx.Done():
 			return
 		default:
-			if err = resolver.Browse(ctx, d.serviceName, "local.", entries); err != nil {
+			if err = resolver.Browse(d.ctx, d.serviceName, "local.", entries); err != nil {
 				log.Printf("Error during mDNS lookup: %v", err)
 			}
 			util.RandSleep(time.Second, 5*time.Second, false)
@@ -98,6 +100,6 @@ func (d *mdnsDiscovery) exposeMDNS() (*zeroconf.Server, error) {
 func (d *mdnsDiscovery) IsStatic() bool { return false }
 
 func (d *mdnsDiscovery) Stop() {
-	d.stopChan <- true
+	d.cancel()
 	d.mdnsServer.Shutdown()
 }
