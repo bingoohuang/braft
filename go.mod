@@ -6,7 +6,7 @@ require (
 	github.com/Jille/raft-grpc-transport v1.2.0
 	github.com/bingoohuang/golog v0.0.0-20220127093001-382e047c483b
 	github.com/gin-gonic/gin v1.7.7
-	github.com/grandcat/zeroconf v1.0.0
+	github.com/grandcat/zeroconf v1.0.1-0.20210929195321-a393c0e41e54
 	github.com/hashicorp/go-hclog v1.1.0
 	github.com/hashicorp/memberlist v0.3.1
 	github.com/hashicorp/raft v1.3.3
@@ -58,7 +58,7 @@ require (
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.15-0.20210929170527-d423e9c6c3bf // indirect
-	github.com/miekg/dns v1.1.27 // indirect
+	github.com/miekg/dns v1.1.41 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
