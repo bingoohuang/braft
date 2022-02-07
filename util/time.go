@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/randx"
 	"github.com/bingoohuang/gg/pkg/thinktime"
 )
 
@@ -18,4 +19,10 @@ func Sleep(envValue string, defaultSleep time.Duration) {
 		log.Printf("sleeping for %s", sleeping)
 		time.Sleep(sleeping)
 	}
+}
+
+// RandSleep sleeps for a random duration.
+func RandSleep(min, max time.Duration) {
+	randPart := time.Duration(randx.IntBetween(int(min), int(max)))
+	time.Sleep(randPart + min)
 }

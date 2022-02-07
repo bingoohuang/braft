@@ -3,10 +3,10 @@ package discovery
 import (
 	"context"
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/bingoohuang/braft/util"
+	"github.com/bingoohuang/gg/pkg/randx"
 	core "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -42,7 +42,7 @@ func (d *kubernetesDiscovery) Name() string {
 }
 
 func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
-	util.Sleep(util.Env("K8S_SLEEP"), time.Duration(rand.Intn(15)+15)*time.Second)
+	util.Sleep(util.Env("K8S_SLEEP"), time.Duration(randx.IntBetween(15, 30))*time.Second)
 
 	cc, err := rest.InClusterConfig()
 	if err != nil {
@@ -62,7 +62,7 @@ func (k *kubernetesDiscovery) discovery() {
 		select {
 		case <-k.stopChan:
 			return
-		case <-time.After(time.Duration(rand.Intn(5)+1) * time.Second):
+		case <-time.After(time.Duration(randx.IntBetween(1, 6)) * time.Second):
 			k.search(false)
 		}
 	}

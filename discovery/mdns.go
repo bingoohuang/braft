@@ -4,54 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
-	"sync"
 	"time"
 
+	"github.com/bingoohuang/braft/util"
+	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/grandcat/zeroconf"
 )
-
-type UniqueQueue struct {
-	sync.Mutex
-	elems        []string
-	maxQueueSize int
-}
-
-func NewUniqueQueue(maxQueueSize int) *UniqueQueue {
-	return &UniqueQueue{
-		maxQueueSize: maxQueueSize,
-		elems:        make([]string, 0, maxQueueSize+1),
-	}
-}
-
-func (q *UniqueQueue) Get() []string {
-	q.Lock()
-	defer q.Unlock()
-
-	ret := make([]string, len(q.elems))
-	copy(ret, q.elems)
-	return ret
-}
-
-func (q *UniqueQueue) Put(value string) {
-	q.Lock()
-	defer q.Unlock()
-
-	for i, elem := range q.elems {
-		if elem == value {
-			copy(q.elems[i:], q.elems[i+1:])
-			q.elems[len(q.elems)-1] = value
-			return
-		}
-	}
-
-	q.elems = append(q.elems, value)
-
-	if len(q.elems) > q.maxQueueSize {
-		copy(q.elems, q.elems[1:])
-		q.elems = q.elems[:maxQueueSize]
-	}
-}
 
 type mdnsDiscovery struct {
 	nodeID        string
@@ -60,23 +18,18 @@ type mdnsDiscovery struct {
 	mdnsServer    *zeroconf.Server
 	discoveryChan chan string
 	stopChan      chan bool
-	tempQueue     *UniqueQueue
+	tempQueue     *util.UniqueQueue
 }
 
 func NewMdnsDiscovery(serviceName string) Discovery {
-	if serviceName == "" {
-		serviceName = "_braft._tcp"
-	}
-	rand.Seed(time.Now().UnixNano())
-
 	return &mdnsDiscovery{
 		nodeID:        "",
-		serviceName:   serviceName,
+		serviceName:   ss.Or(serviceName, "_braft._tcp"),
 		nodePort:      0,
 		mdnsServer:    &zeroconf.Server{},
 		discoveryChan: make(chan string),
 		stopChan:      make(chan bool),
-		tempQueue:     NewUniqueQueue(maxQueueSize),
+		tempQueue:     util.NewUniqueQueue(100),
 	}
 }
 
@@ -91,13 +44,11 @@ func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) 
 	go d.discovery()
 
 	// 防止各个节点同时启动太快，随机休眠
-	time.Sleep(time.Duration(rand.Intn(500)+500) * time.Millisecond)
+	util.RandSleep(500*time.Millisecond, 1*time.Second)
 	return d.discoveryChan, nil
 }
 
 func (k *mdnsDiscovery) Search() (dest []string, err error) { return k.tempQueue.Get(), nil }
-
-const maxQueueSize = 10
 
 func (d *mdnsDiscovery) discovery() {
 	// expose mdns server
@@ -137,7 +88,7 @@ func (d *mdnsDiscovery) discovery() {
 			if err = resolver.Browse(ctx, d.serviceName, "local.", entries); err != nil {
 				log.Printf("Error during mDNS lookup: %v", err)
 			}
-			time.Sleep(time.Duration(rand.Intn(5)+1) * time.Second)
+			util.RandSleep(time.Second, 5*time.Second)
 		}
 	}
 }
