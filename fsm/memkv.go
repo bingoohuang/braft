@@ -2,8 +2,6 @@ package fsm
 
 import (
 	"sync"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 type KvOperate string
@@ -33,20 +31,12 @@ func NewMemKvService() *MemKvService {
 func (m *MemKvService) Name() string { return "mem_kv" }
 
 func (m *MemKvService) ApplySnapshot(input interface{}) error {
-	var svc MemKvService
-	if err := mapstructure.Decode(input, &svc); err != nil {
-		return err
-	}
-	m.Maps = svc.Maps
+	m.Maps = input.(MemKvService).Maps
 	return nil
 }
 
-func (m *MemKvService) NewLog(request map[string]interface{}) interface{} {
-	var req KvRequest
-	if err := mapstructure.Decode(request, &req); err != nil {
-		return err
-	}
-	return m.Exec(req)
+func (m *MemKvService) NewLog(req interface{}) interface{} {
+	return m.Exec(req.(KvRequest))
 }
 
 func (m *MemKvService) Exec(req KvRequest) interface{} {

@@ -11,7 +11,6 @@ require (
 	github.com/hashicorp/memberlist v0.3.1
 	github.com/hashicorp/raft v1.3.3
 	github.com/hashicorp/raft-boltdb v0.0.0-20211202195631-7d34b9fb3f42
-	github.com/mitchellh/mapstructure v1.4.3
 	github.com/segmentio/ksuid v1.0.4
 	github.com/sirupsen/logrus v1.6.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
@@ -27,6 +26,7 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/pbnjay/pixfont v0.0.0-20200714042608-33b744692567 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
 
@@ -62,6 +62,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
+	github.com/stretchr/testify v1.7.0
 	github.com/ugorji/go/codec v1.1.7 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect

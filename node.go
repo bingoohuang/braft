@@ -15,8 +15,8 @@ import (
 	transport "github.com/Jille/raft-grpc-transport"
 	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/fsm"
+	"github.com/bingoohuang/braft/marshal"
 	"github.com/bingoohuang/braft/proto"
-	"github.com/bingoohuang/braft/serializer"
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/goip"
 	"github.com/bingoohuang/gg/pkg/ss"
@@ -49,10 +49,10 @@ type Node struct {
 
 // Config is the configuration of the node.
 type Config struct {
-	Serializer serializer.Serializer
-	DataDir    string
-	Discovery  discovery.Discovery
-	Services   []fsm.Service
+	TypeRegister *marshal.TypeRegister
+	DataDir      string
+	Discovery    discovery.Discovery
+	Services     []fsm.Service
 }
 
 // ConfigFn is the function option pattern for the NodeConfig.
@@ -67,8 +67,10 @@ func WithDiscovery(s discovery.Discovery) ConfigFn { return func(c *Config) { c.
 // WithDataDir specifies the data directory.
 func WithDataDir(s string) ConfigFn { return func(c *Config) { c.DataDir = s } }
 
-// WithSerializer specifies the serializer.Serializer of the raft log messages.
-func WithSerializer(s serializer.Serializer) ConfigFn { return func(c *Config) { c.Serializer = s } }
+// WithTypeRegister specifies the serializer.TypeRegister of the raft log messages.
+func WithTypeRegister(s *marshal.TypeRegister) ConfigFn {
+	return func(c *Config) { c.TypeRegister = s }
+}
 
 // RaftID is the structure of node ID.
 type RaftID struct {
@@ -84,8 +86,8 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	for _, f := range fns {
 		f(nodeConfig)
 	}
-	if nodeConfig.Serializer == nil {
-		nodeConfig.Serializer = serializer.NewMsgPackSerializer()
+	if nodeConfig.TypeRegister == nil {
+		nodeConfig.TypeRegister = marshal.NewTypeRegister(marshal.NewMsgPackSerializer())
 	}
 	if nodeConfig.Discovery == nil {
 		nodeConfig.Discovery = EnvDiscovery
@@ -153,7 +155,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	snapshotStore := raft.NewDiscardSnapshotStore()
 
 	// FSM 有限状态机
-	sm := fsm.NewRoutingFSM(nodeConfig.Services, nodeConfig.Serializer)
+	sm := fsm.NewRoutingFSM(nodeConfig.Services, nodeConfig.TypeRegister)
 
 	// memberlist config
 	discoveryConfig := memberlist.DefaultLocalConfig()
@@ -343,7 +345,7 @@ func (n *Node) IsLeader() bool { return n.Raft.VerifyLeader().Error() == nil }
 // RaftApply is used to apply any new logs to the raft cluster
 // this method does automatic forwarding to Leader Node
 func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{}, error) {
-	payload, err := n.conf.Serializer.Serialize(request)
+	payload, err := n.conf.TypeRegister.Marshal(request)
 	if err != nil {
 		return nil, err
 	}

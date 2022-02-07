@@ -31,12 +31,7 @@ func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 		return nil, err
 	}
 
-	result, err := n.conf.Serializer.Deserialize(response.Response)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return n.conf.TypeRegister.Unmarshal(response.Response)
 }
 
 // GetPeerDetails returns the remote peer details.

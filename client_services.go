@@ -29,7 +29,7 @@ func (s *ClientGrpcServices) ApplyLog(ctx context.Context, r *proto.ApplyRequest
 	if result.Error() != nil {
 		return nil, result.Error()
 	}
-	respPayload, err := s.Node.conf.Serializer.Serialize(result.Response())
+	respPayload, err := s.Node.conf.TypeRegister.Marshal(result.Response())
 	if err != nil {
 		return nil, err
 	}
