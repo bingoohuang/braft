@@ -5,10 +5,53 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/grandcat/zeroconf"
 )
+
+type UniqueQueue struct {
+	sync.Mutex
+	elems        []string
+	maxQueueSize int
+}
+
+func NewUniqueQueue(maxQueueSize int) *UniqueQueue {
+	return &UniqueQueue{
+		maxQueueSize: maxQueueSize,
+		elems:        make([]string, 0, maxQueueSize+1),
+	}
+}
+
+func (q *UniqueQueue) Get() []string {
+	q.Lock()
+	defer q.Unlock()
+
+	ret := make([]string, len(q.elems))
+	copy(ret, q.elems)
+	return ret
+}
+
+func (q *UniqueQueue) Put(value string) {
+	q.Lock()
+	defer q.Unlock()
+
+	for i, elem := range q.elems {
+		if elem == value {
+			copy(q.elems[i:], q.elems[i+1:])
+			q.elems[len(q.elems)-1] = value
+			return
+		}
+	}
+
+	q.elems = append(q.elems, value)
+
+	if len(q.elems) > q.maxQueueSize {
+		copy(q.elems, q.elems[1:])
+		q.elems = q.elems[:maxQueueSize]
+	}
+}
 
 type mdnsDiscovery struct {
 	nodeID        string
@@ -17,7 +60,7 @@ type mdnsDiscovery struct {
 	mdnsServer    *zeroconf.Server
 	discoveryChan chan string
 	stopChan      chan bool
-	tempQueue     []string
+	tempQueue     *UniqueQueue
 }
 
 func NewMdnsDiscovery(serviceName string) Discovery {
@@ -33,6 +76,7 @@ func NewMdnsDiscovery(serviceName string) Discovery {
 		mdnsServer:    &zeroconf.Server{},
 		discoveryChan: make(chan string),
 		stopChan:      make(chan bool),
+		tempQueue:     NewUniqueQueue(maxQueueSize),
 	}
 }
 
@@ -51,7 +95,7 @@ func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) 
 	return d.discoveryChan, nil
 }
 
-func (k *mdnsDiscovery) Search() (dest []string, err error) { return k.tempQueue, nil }
+func (k *mdnsDiscovery) Search() (dest []string, err error) { return k.tempQueue.Get(), nil }
 
 const maxQueueSize = 10
 
@@ -77,11 +121,7 @@ func (d *mdnsDiscovery) discovery() {
 			case entry := <-entries:
 				value := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
 				d.discoveryChan <- value
-				d.tempQueue = append(d.tempQueue, value)
-				if len(d.tempQueue) > maxQueueSize {
-					copy(d.tempQueue, d.tempQueue[1:])
-					d.tempQueue = d.tempQueue[:maxQueueSize]
-				}
+				d.tempQueue.Put(value)
 			}
 		}
 	}()
