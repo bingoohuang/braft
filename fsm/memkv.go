@@ -6,34 +6,34 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type OperateType string
+type KvOperate string
 
 const (
-	OperateGet OperateType = "get"
-	OperateSet OperateType = "set"
-	OperateDel OperateType = "del"
+	KvGet KvOperate = "get"
+	KvSet KvOperate = "set"
+	KvDel KvOperate = "del"
 )
 
-type MapRequest struct {
-	Operate OperateType
-	MapName string
-	Key     string
-	Value   interface{}
+type KvRequest struct {
+	KvOperate KvOperate
+	MapName   string
+	Key       string
+	Value     interface{}
 }
 
-type MemMapService struct {
+type MemKvService struct {
 	sync.RWMutex
 	Maps map[string]*Map
 }
 
-func NewMemMapService() *MemMapService {
-	return &MemMapService{Maps: map[string]*Map{}}
+func NewMemKvService() *MemKvService {
+	return &MemKvService{Maps: map[string]*Map{}}
 }
 
-func (m *MemMapService) Name() string { return "in_memory_map" }
+func (m *MemKvService) Name() string { return "mem_kv" }
 
-func (m *MemMapService) ApplySnapshot(input interface{}) error {
-	var svc MemMapService
+func (m *MemKvService) ApplySnapshot(input interface{}) error {
+	var svc MemKvService
 	if err := mapstructure.Decode(input, &svc); err != nil {
 		return err
 	}
@@ -41,33 +41,33 @@ func (m *MemMapService) ApplySnapshot(input interface{}) error {
 	return nil
 }
 
-func (m *MemMapService) NewLog(request map[string]interface{}) interface{} {
-	var req MapRequest
+func (m *MemKvService) NewLog(request map[string]interface{}) interface{} {
+	var req KvRequest
 	if err := mapstructure.Decode(request, &req); err != nil {
 		return err
 	}
 	return m.Exec(req)
 }
 
-func (m *MemMapService) Exec(req MapRequest) interface{} {
+func (m *MemKvService) Exec(req KvRequest) interface{} {
 	m.Lock()
 	defer m.Unlock()
 
-	switch req.Operate {
-	case OperateSet:
+	switch req.KvOperate {
+	case KvSet:
 		m.put(req.MapName, req.Key, req.Value)
-	case OperateGet:
+	case KvGet:
 		return m.get(req.MapName, req.Key)
-	case OperateDel:
+	case KvDel:
 		m.del(req.MapName, req.Key)
 	}
 
 	return nil
 }
 
-func (m *MemMapService) GetReqDataType() interface{} { return MapRequest{} }
+func (m *MemKvService) GetReqDataType() interface{} { return KvRequest{} }
 
-func (m *MemMapService) put(mapName string, key string, value interface{}) {
+func (m *MemKvService) put(mapName string, key string, value interface{}) {
 	fMap, found := m.Maps[mapName]
 	if !found {
 		fMap = &Map{Data: map[string]interface{}{}}
@@ -77,7 +77,7 @@ func (m *MemMapService) put(mapName string, key string, value interface{}) {
 	fMap.put(key, value)
 }
 
-func (m *MemMapService) get(mapName string, key string) interface{} {
+func (m *MemKvService) get(mapName string, key string) interface{} {
 	fMap, found := m.Maps[mapName]
 	if !found {
 		return nil
@@ -86,7 +86,7 @@ func (m *MemMapService) get(mapName string, key string) interface{} {
 	return fMap.get(key)
 }
 
-func (m *MemMapService) del(mapName string, key string) {
+func (m *MemKvService) del(mapName string, key string) {
 	fMap, found := m.Maps[mapName]
 	if !found {
 		return

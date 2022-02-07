@@ -110,7 +110,7 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 
 // ServeKV services the kv set/get http api.
 func (n *Node) ServeKV(ctx *gin.Context) {
-	req := fsm.MapRequest{
+	req := fsm.KvRequest{
 		MapName: util.Or(getQuery(ctx, "map", "m"), "default"),
 		Key:     util.Or(getQuery(ctx, "key", "k"), "default"),
 	}
@@ -119,20 +119,20 @@ func (n *Node) ServeKV(ctx *gin.Context) {
 	ctx.Header("Braft-Host", n.RaftID.Hostname)
 	switch ctx.Request.Method {
 	case http.MethodPost:
-		req.Operate = fsm.OperateSet
+		req.KvOperate = fsm.KvSet
 		req.Value = getQuery(ctx, "value", "v")
 	case http.MethodGet:
-		req.Operate = fsm.OperateGet
+		req.KvOperate = fsm.KvGet
 		for _, service := range n.conf.Services {
 			if m, ok := service.(interface {
-				Exec(req fsm.MapRequest) interface{}
+				Exec(req fsm.KvRequest) interface{}
 			}); ok {
 				ctx.JSON(http.StatusOK, m.Exec(req))
 				return
 			}
 		}
 	case http.MethodDelete:
-		req.Operate = fsm.OperateDel
+		req.KvOperate = fsm.KvDel
 	}
 
 	result, err := n.RaftApply(req, time.Second)

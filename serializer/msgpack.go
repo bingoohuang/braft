@@ -4,9 +4,7 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-func NewMsgPackSerializer() Serializer {
-	return &MsgPackSerializer{}
-}
+func NewMsgPackSerializer() Serializer { return &MsgPackSerializer{} }
 
 type MsgPackSerializer struct{}
 

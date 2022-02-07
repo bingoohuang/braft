@@ -95,7 +95,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 		nodeConfig.Discovery = EnvDiscovery
 	}
 	if len(nodeConfig.Services) == 0 {
-		nodeConfig.Services = []fsm.Service{fsm.NewMemMapService()}
+		nodeConfig.Services = []fsm.Service{fsm.NewMemKvService()}
 	}
 
 	if nodeConfig.DataDir == "" {
@@ -157,8 +157,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	snapshotStore := raft.NewDiscardSnapshotStore()
 
 	// FSM 有限状态机
-	sm := fsm.NewRoutingFSM(nodeConfig.Services)
-	sm.Init(nodeConfig.Serializer)
+	sm := fsm.NewRoutingFSM(nodeConfig.Services, nodeConfig.Serializer)
 
 	// memberlist config
 	discoveryConfig := memberlist.DefaultWANConfig()

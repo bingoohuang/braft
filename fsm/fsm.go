@@ -1,19 +1,5 @@
 package fsm
 
-import (
-	"github.com/bingoohuang/braft/serializer"
-	"github.com/hashicorp/raft"
-)
-
-// FSM is the interface for using Finite State Machine in Raft Cluster
-type FSM interface {
-	raft.FSM
-
-	// Init is used to pass the original serializer from BRaft Node to be able to deserialize messages
-	// coming from other nodes
-	Init(ser serializer.Serializer)
-}
-
 // Service interface makes it easier to build State Machines
 type Service interface {
 	// Name returns the unique ID/Name which will identify the FSM Service when it comes to routing incoming messages
