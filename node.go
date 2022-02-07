@@ -156,7 +156,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	sm := fsm.NewRoutingFSM(nodeConfig.Services, nodeConfig.Serializer)
 
 	// memberlist config
-	discoveryConfig := memberlist.DefaultWANConfig()
+	discoveryConfig := memberlist.DefaultLocalConfig()
 	discoveryConfig.BindPort = EnvDport
 	discoveryConfig.Name = fmt.Sprintf("%s:%d", nodeID, EnvRport)
 	discoveryConfig.Logger = log.Default()
@@ -375,13 +375,13 @@ type logger struct{}
 func (l *logger) Log(level hclog.Level, msg string, args ...interface{}) {
 	switch {
 	case level <= hclog.Debug:
-		log.Printf("D! "+msg, args...)
+		log.Print(append([]interface{}{"D!", msg}, args...)...)
 	case level == hclog.Info:
-		log.Printf("I! "+msg, args...)
+		log.Print(append([]interface{}{"I!", msg}, args...)...)
 	case level == hclog.Warn:
-		log.Printf("W! "+msg, args...)
+		log.Print(append([]interface{}{"W!", msg}, args...)...)
 	case level >= hclog.Error:
-		log.Printf("E! "+msg, args...)
+		log.Print(append([]interface{}{"E!", msg}, args...)...)
 	}
 }
 
