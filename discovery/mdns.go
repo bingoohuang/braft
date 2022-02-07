@@ -119,9 +119,11 @@ func (d *mdnsDiscovery) discovery() {
 			case <-d.stopChan:
 				return
 			case entry := <-entries:
-				value := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
-				d.discoveryChan <- value
-				d.tempQueue.Put(value)
+				if entry != nil {
+					value := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
+					d.discoveryChan <- value
+					d.tempQueue.Put(value)
+				}
 			}
 		}
 	}()
