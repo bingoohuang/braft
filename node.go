@@ -276,9 +276,9 @@ func (n *Node) Stop() {
 	log.Print("Node Stopped!")
 }
 
-func (n *Node) findPeerServer(peer, serverID string) bool {
+func (n *Node) findServer(serverID string) bool {
 	for _, s := range n.Raft.GetConfiguration().Configuration().Servers {
-		if s.ID == raft.ServerID(serverID) {
+		if string(s.ID) == serverID {
 			return true
 		}
 	}
@@ -294,7 +294,7 @@ func (n *Node) handleDiscoveredNodes(discoveryChan chan string) {
 		}
 
 		if rsp, err := GetPeerDetails(peer); err == nil {
-			if n.findPeerServer(peer, rsp.ServerId) {
+			if n.findServer(rsp.ServerId) {
 				continue
 			}
 
