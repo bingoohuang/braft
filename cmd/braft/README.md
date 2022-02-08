@@ -9,9 +9,9 @@ Usage
 1. Build example:
    2. `go install ./...`
 2. Run nodes locally:
-   1. `BRAFT_RPORT=15000 braft`
-   2. `BRAFT_RPORT=16000 braft`
-   3. `BRAFT_RPORT=17000 braft`
+   1. `GOLOG_STDOUT=true BRAFT_RPORT=15000 braft`
+   2. `GOLOG_STDOUT=true BRAFT_RPORT=16000 braft`
+   3. `GOLOG_STDOUT=true BRAFT_RPORT=17000 braft`
 3. Put value on any node:
    1. `curl -X POST 'http://localhost:15002/kv?map=test&k=somekey&v=somevalue'`
 4. Get value from all the nodes:
