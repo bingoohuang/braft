@@ -29,7 +29,7 @@ func (s *ClientGrpcServices) ApplyLog(ctx context.Context, r *proto.ApplyRequest
 	if result.Error() != nil {
 		return nil, result.Error()
 	}
-	respPayload, err := s.Node.conf.TypeRegister.Marshal(result.Response())
+	respPayload, err := s.Node.Conf.TypeRegister.Marshal(result.Response())
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ var ErrNone = errors.New("")
 func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsRequest) (*proto.GetDetailsResponse, error) {
 	var resultErr error
 	var discoveryNodes []string
-	if search, ok := s.Node.conf.Discovery.(discovery.Searchable); ok {
+	if search, ok := s.Node.Conf.Discovery.(discovery.Searchable); ok {
 		nodes, err := search.Search()
 		if err != nil {
 			resultErr = multierror.Append(resultErr, err)

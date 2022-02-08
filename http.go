@@ -19,6 +19,15 @@ import (
 // HTTPConfig is configuration for HTTP service.
 type HTTPConfig struct {
 	EnableKv bool
+	Handlers map[string]pathHalder
+}
+
+// HandlerFunc defines the handler used by gin middleware as return value.
+type HandlerFunc func(ctx *gin.Context, n *Node)
+
+type pathHalder struct {
+	path    string
+	handler HandlerFunc
 }
 
 // HTTPConfigFn is function options for HTTPConfig.
@@ -27,9 +36,14 @@ type HTTPConfigFn func(*HTTPConfig)
 // WithEnableKV enables or disables KV service on HTTP.
 func WithEnableKV(b bool) HTTPConfigFn { return func(c *HTTPConfig) { c.EnableKv = b } }
 
+// WithHandler defines the http handler.
+func WithHandler(method, path string, handler HandlerFunc) HTTPConfigFn {
+	return func(c *HTTPConfig) { c.Handlers[method] = pathHalder{path: path, handler: handler} }
+}
+
 // RunHTTP run http service on block.
 func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
-	c := &HTTPConfig{EnableKv: true}
+	c := &HTTPConfig{EnableKv: true, Handlers: map[string]pathHalder{}}
 	for _, f := range fs {
 		f(c)
 	}
@@ -43,6 +57,12 @@ func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
 		r.GET("/kv", n.ServeKV)
 		r.POST("/kv", n.ServeKV)
 		r.DELETE("/kv", n.ServeKV)
+	}
+
+	for method, handler := range c.Handlers {
+		r.Handle(method, handler.path, func(ctx *gin.Context) {
+			handler.handler(ctx, n)
+		})
 	}
 
 	if err := r.Run(fmt.Sprintf(":%d", EnvHport)); err != nil {
@@ -67,9 +87,6 @@ type RaftNode struct {
 	ServerID       string
 	Address        string
 	RaftState      string
-	RaftPort       int32
-	DiscoveryPort  int32
-	HTTPPort       int32
 	RaftID         RaftID
 	DiscoveryNodes []string
 	StartTime      string
@@ -95,7 +112,6 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 				RaftID:  rid,
 				Address: string(server.Address), Leader: rsp.Leader,
 				ServerID: rsp.ServerId, RaftState: rsp.RaftState,
-				RaftPort: rsp.RaftPort, HTTPPort: rsp.HttpPort, DiscoveryPort: rsp.DiscoveryPort,
 				Error:          rsp.Error,
 				DiscoveryNodes: rsp.DiscoveryNodes,
 				StartTime:      rsp.StartTime,
@@ -132,10 +148,8 @@ func (n *Node) ServeKV(ctx *gin.Context) {
 		req.Value = getQuery(ctx, "value", "v")
 	case http.MethodGet:
 		req.KvOperate = fsm.KvGet
-		for _, service := range n.conf.Services {
-			if m, ok := service.(interface {
-				Exec(req fsm.KvRequest) interface{}
-			}); ok {
+		for _, service := range n.Conf.Services {
+			if m, ok := service.(fsm.KvExectable); ok {
 				ctx.JSON(http.StatusOK, m.Exec(req))
 				return
 			}

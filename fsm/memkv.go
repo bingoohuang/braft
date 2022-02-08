@@ -1,7 +1,11 @@
 package fsm
 
 import (
+	"log"
+	"reflect"
 	"sync"
+
+	"github.com/bingoohuang/braft/marshal"
 )
 
 type KvOperate string
@@ -19,29 +23,44 @@ type KvRequest struct {
 	Value     interface{}
 }
 
+type KvExectable interface {
+	Exec(req KvRequest) interface{}
+}
+
+var _ interface {
+	Service
+	KvExectable
+} = (*MemKvService)(nil)
+
 type MemKvService struct {
-	sync.RWMutex
+	lock *sync.Mutex
 	Maps map[string]*Map
 }
 
 func NewMemKvService() *MemKvService {
-	return &MemKvService{Maps: map[string]*Map{}}
+	return &MemKvService{Maps: map[string]*Map{}, lock: &sync.Mutex{}}
 }
 
-func (m *MemKvService) Name() string { return "mem_kv" }
+// RegisterMarshalTypes registers the types for marshaling and unmarshaling.
+func (m *MemKvService) RegisterMarshalTypes(typeRegister *marshal.TypeRegister) {
+	typeRegister.RegisterType(reflect.TypeOf(KvRequest{}))
+}
 
-func (m *MemKvService) ApplySnapshot(input interface{}) error {
-	m.Maps = input.(MemKvService).Maps
+func (m *MemKvService) ApplySnapshot(nodeID string, input interface{}) error {
+	log.Printf("MemKvService ApplySnapshot req: %+v", input)
+	service := input.(*MemKvService)
+	m.Maps = service.Maps
 	return nil
 }
 
-func (m *MemKvService) NewLog(req interface{}) interface{} {
+func (m *MemKvService) NewLog(nodeID string, req interface{}) interface{} {
+	log.Printf("MemKvService NewLog req: %+v", req)
 	return m.Exec(req.(KvRequest))
 }
 
 func (m *MemKvService) Exec(req KvRequest) interface{} {
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	switch req.KvOperate {
 	case KvSet:
@@ -60,7 +79,7 @@ func (m *MemKvService) GetReqDataType() interface{} { return KvRequest{} }
 func (m *MemKvService) put(mapName string, key string, value interface{}) {
 	fMap, found := m.Maps[mapName]
 	if !found {
-		fMap = &Map{Data: map[string]interface{}{}}
+		fMap = &Map{Data: map[string]interface{}{}, lock: &sync.RWMutex{}}
 		m.Maps[mapName] = fMap
 	}
 
@@ -86,27 +105,27 @@ func (m *MemKvService) del(mapName string, key string) {
 }
 
 type Map struct {
-	sync.RWMutex
+	lock *sync.RWMutex
 	Data map[string]interface{}
 }
 
 func (m *Map) del(k string) {
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	delete(m.Data, k)
 }
 
 func (m *Map) get(k string) interface{} {
-	m.RLock()
-	defer m.RUnlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 
 	return m.Data[k]
 }
 
 func (m *Map) put(k string, v interface{}) {
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	m.Data[k] = v
 }

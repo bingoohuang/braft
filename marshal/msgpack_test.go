@@ -20,4 +20,6 @@ func TestMsgPack(t *testing.T) {
 	m1, err := tr.Unmarshal(data)
 	assert.Nil(t, err)
 	assert.Equal(t, ms, m1)
+
+	tr.Marshal(nil)
 }

@@ -477,8 +477,7 @@ type RaftServer interface {
 }
 
 // UnimplementedRaftServer can be embedded to have forward compatible implementations.
-type UnimplementedRaftServer struct {
-}
+type UnimplementedRaftServer struct{}
 
 func (*UnimplementedRaftServer) ApplyLog(context.Context, *ApplyRequest) (*ApplyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyLog not implemented")

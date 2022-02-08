@@ -16,12 +16,14 @@ type FSM struct {
 	ser          *marshal.TypeRegister
 	services     []Service
 	reqDataTypes []ReqTypeInfo
+	shortNodeID  string
 }
 
-func NewRoutingFSM(services []Service, ser *marshal.TypeRegister) raft.FSM {
+func NewRoutingFSM(shortNodeID string, services []Service, ser *marshal.TypeRegister) raft.FSM {
 	i := &FSM{
-		services: services,
-		ser:      ser,
+		services:    services,
+		ser:         ser,
+		shortNodeID: shortNodeID,
 	}
 	for _, service := range services {
 		i.reqDataTypes = append(i.reqDataTypes, MakeReqTypeInfo(service))
@@ -31,16 +33,21 @@ func NewRoutingFSM(services []Service, ser *marshal.TypeRegister) raft.FSM {
 }
 
 func (i *FSM) Apply(raftlog *raft.Log) interface{} {
+	log.Printf("FSM Apply LogType: %s", raftlog.Type)
+
 	switch raftlog.Type {
 	case raft.LogCommand:
 		payload, err := i.ser.Unmarshal(raftlog.Data)
 		if err != nil {
+			log.Printf("E! Unmarshal, error: %v", err)
 			return err
 		}
 
 		// routing request to service
 		if target, err := getTargetTypeInfo(i.reqDataTypes, payload); err == nil {
-			return target.Service.NewLog(payload)
+			return target.Service.NewLog(i.shortNodeID, payload)
+		} else {
+			log.Printf("E! unknown request data type, error: %v", err)
 		}
 
 		return errors.New("unknown request data type")
@@ -52,6 +59,8 @@ func (i *FSM) Apply(raftlog *raft.Log) interface{} {
 func (i *FSM) Snapshot() (raft.FSMSnapshot, error) { return newFSMSnapshot(i), nil }
 
 func (i *FSM) Restore(closer io.ReadCloser) error {
+	log.Printf("FSM Restore")
+
 	snapData, err := ioutil.ReadAll(closer)
 	if err != nil {
 		return err
@@ -61,11 +70,15 @@ func (i *FSM) Restore(closer io.ReadCloser) error {
 		return err
 	}
 
-	serviceType := reflect.TypeOf(servicesData)
-	for _, service := range i.services {
-		if reflect.TypeOf(service) == serviceType {
-			if err = service.ApplySnapshot(servicesData); err != nil {
-				log.Printf("Failed to apply snapshot to service %q!", service.Name())
+	services := servicesData.([]Service)
+	for _, a := range i.services {
+		for _, b := range services {
+			if aType := reflect.TypeOf(a); aType == reflect.TypeOf(b) {
+				if err := a.ApplySnapshot(i.shortNodeID, b); err != nil {
+					log.Printf("Failed to apply snapshot to service %s, error: %v!", aType, err)
+				}
+
+				break
 			}
 		}
 	}

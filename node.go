@@ -18,6 +18,7 @@ import (
 	"github.com/bingoohuang/braft/marshal"
 	"github.com/bingoohuang/braft/proto"
 	"github.com/bingoohuang/braft/util"
+	"github.com/bingoohuang/gg/pkg/codec"
 	"github.com/bingoohuang/gg/pkg/goip"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/golog/pkg/logfmt"
@@ -42,9 +43,10 @@ type Node struct {
 	discoveryConfig  *memberlist.Config
 	mList            *memberlist.Memberlist
 	stopped          uint32
-	conf             *Config
+	Conf             *Config
 
-	StartTime time.Time
+	StartTime   time.Time
+	distributor *fsm.Distributor
 }
 
 // Config is the configuration of the node.
@@ -89,11 +91,16 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	if nodeConfig.TypeRegister == nil {
 		nodeConfig.TypeRegister = marshal.NewTypeRegister(marshal.NewMsgPackSerializer())
 	}
+
 	if nodeConfig.Discovery == nil {
 		nodeConfig.Discovery = EnvDiscovery
 	}
 	if len(nodeConfig.Services) == 0 {
 		nodeConfig.Services = []fsm.Service{fsm.NewMemKvService()}
+	}
+
+	for _, service := range nodeConfig.Services {
+		service.RegisterMarshalTypes(nodeConfig.TypeRegister)
 	}
 
 	if nodeConfig.DataDir == "" {
@@ -155,7 +162,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	snapshotStore := raft.NewDiscardSnapshotStore()
 
 	// FSM 有限状态机
-	sm := fsm.NewRoutingFSM(nodeConfig.Services, nodeConfig.TypeRegister)
+	sm := fsm.NewRoutingFSM(raftID.ID, nodeConfig.Services, nodeConfig.TypeRegister)
 
 	// memberlist config
 	discoveryConfig := memberlist.DefaultLocalConfig()
@@ -180,8 +187,9 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 		addr:             fmt.Sprintf(":%d", EnvRport),
 		Raft:             raftServer,
 		TransportManager: t,
-		conf:             nodeConfig,
+		Conf:             nodeConfig,
 		discoveryConfig:  discoveryConfig,
+		distributor:      fsm.NewDistributor(),
 	}, nil
 }
 
@@ -231,7 +239,7 @@ func (n *Node) Start() error {
 	logfmt.RegisterLevelKey("[DEBUG]", logrus.DebugLevel)
 
 	// discovery method
-	discoveryChan, err := n.conf.Discovery.Start(n.ID, EnvRport)
+	discoveryChan, err := n.Conf.Discovery.Start(n.ID, EnvRport)
 	if err != nil {
 		return err
 	}
@@ -251,7 +259,7 @@ func (n *Node) Start() error {
 
 // DiscoveryName returns the name of discovery.
 func (n *Node) DiscoveryName() string {
-	return n.conf.Discovery.Name()
+	return n.Conf.Discovery.Name()
 }
 
 // Stop stops the node and notifies on stopped channel returned in Start.
@@ -261,7 +269,7 @@ func (n *Node) Stop() {
 	}
 
 	log.Print("Stopping Node...")
-	n.conf.Discovery.Stop()
+	n.Conf.Discovery.Stop()
 	if err := n.mList.Leave(10 * time.Second); err != nil {
 		log.Printf("Failed to leave from discovery: %q", err.Error())
 	}
@@ -324,7 +332,7 @@ func (n *Node) NotifyJoin(node *memberlist.Node) {
 // NotifyLeave triggered when a Node becomes unavailable after a period of time
 // it will remove the unavailable Node from the Raft cluster
 func (n *Node) NotifyLeave(node *memberlist.Node) {
-	if n.conf.Discovery.IsStatic() {
+	if n.Conf.Discovery.IsStatic() {
 		return
 	}
 
@@ -345,7 +353,7 @@ func (n *Node) IsLeader() bool { return n.Raft.VerifyLeader().Error() == nil }
 // RaftApply is used to apply any new logs to the raft cluster
 // this method does automatic forwarding to Leader Node
 func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{}, error) {
-	payload, err := n.conf.TypeRegister.Marshal(request)
+	payload, err := n.Conf.TypeRegister.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
@@ -368,6 +376,27 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 	log.Printf("transfer to leader")
 
 	return n.ApplyOnLeader(payload)
+}
+
+// ShortNodeIds returns a list of short node IDs of the current raft cluster.
+func (n *Node) ShortNodeIds() (nodeIds []string) {
+	for _, server := range n.Raft.GetConfiguration().Configuration().Servers {
+		var rid RaftID
+		data, _ := base64.RawURLEncoding.DecodeString(string(server.ID))
+		msgpack.Unmarshal(data, &rid)
+		nodeIds = append(nodeIds, rid.ID)
+	}
+	return
+}
+
+// Distribute distribute the given bean to all the nodes in the cluster.
+func (n *Node) Distribute(bean fsm.Distributable) (interface{}, error) {
+	items := bean.GetDistributableItems()
+	dataLen := n.distributor.Distribute(n.ShortNodeIds(), items)
+
+	log.Printf("distribute %d items: %s", dataLen, codec.Json(bean))
+
+	return n.RaftApply(fsm.DistributeRequest{Payload: bean}, time.Second)
 }
 
 // logger adapters logger to LevelLogger.

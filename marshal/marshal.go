@@ -46,8 +46,11 @@ func (t *TypeRegister) newType(typ string) (ptr reflect.Value, ok bool) {
 	}
 }
 
-func (t *TypeRegister) registerType(i interface{}) (typName string, isPtr bool) {
-	typ := reflect.TypeOf(i)
+func (t *TypeRegister) RegisterType(typ reflect.Type) (typName string, isPtr bool) {
+	if typ == nil {
+		return "nil", false
+	}
+
 	if isPtr = typ.Kind() == reflect.Ptr; isPtr {
 		typ = typ.Elem()
 	}
@@ -71,31 +74,58 @@ func (t *TypeRegister) Unmarshal(data []byte) (interface{}, error) {
 	if err := t.Marshaler.Unmarshal(data, &wrap); err != nil {
 		return nil, err
 	}
+	if wrap.Type == "nil" {
+		return nil, nil
+	}
 
 	ptr, ok := t.newType(wrap.Type)
 	if !ok {
 		return nil, fmt.Errorf("%s: %w", wrap.Type, ErrUnknownType)
 	}
+	pi := ptr.Interface()
 
-	if err := t.Marshaler.Unmarshal(wrap.Payload, ptr.Interface()); err != nil {
+	var err error
+	if customMarshal, ok := pi.(TypeRegisterUnmarshaler); ok {
+		err = customMarshal.UnmarshalMsgpack(t, wrap.Payload)
+	} else {
+		err = t.Marshaler.Unmarshal(wrap.Payload, pi)
+	}
+	if err != nil {
 		return nil, err
 	}
 
 	if wrap.IsPtr {
-		return ptr.Interface(), nil
+		return pi, nil
 	}
 
 	return ptr.Elem().Interface(), nil
 }
 
+type TypeRegisterMarshaler interface {
+	MarshalMsgpack(*TypeRegister) ([]byte, error)
+}
+
+type TypeRegisterUnmarshaler interface {
+	UnmarshalMsgpack(*TypeRegister, []byte) error
+}
+
 func (t *TypeRegister) Marshal(data interface{}) ([]byte, error) {
-	payload, err := t.Marshaler.Marshal(data)
+	var (
+		payload []byte
+		err     error
+	)
+
+	if customMarshal, ok := data.(TypeRegisterMarshaler); ok {
+		payload, err = customMarshal.MarshalMsgpack(t)
+	} else {
+		payload, err = t.Marshaler.Marshal(data)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	typName, isPtr := t.registerType(data)
-
+	typName, isPtr := t.RegisterType(reflect.TypeOf(data))
 	wrap := Data{
 		Payload: payload,
 		Type:    typName,
