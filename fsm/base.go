@@ -56,7 +56,7 @@ func (i *FSM) Apply(raftlog *raft.Log) interface{} {
 	return nil
 }
 
-func (i *FSM) Snapshot() (raft.FSMSnapshot, error) { return newFSMSnapshot(i), nil }
+func (i *FSM) Snapshot() (raft.FSMSnapshot, error) { return newSnapshot(i), nil }
 
 func (i *FSM) Restore(closer io.ReadCloser) error {
 	log.Printf("FSM Restore")
@@ -111,14 +111,14 @@ func getTargetTypeInfo(types []ReqTypeInfo, result interface{}) (ReqTypeInfo, er
 	return ReqTypeInfo{}, marshal.ErrUnknownType
 }
 
-type FSMSnapshot struct {
+type Snapshot struct {
 	sync.Mutex
 	fsm *FSM
 }
 
-func newFSMSnapshot(fsm *FSM) raft.FSMSnapshot { return &FSMSnapshot{fsm: fsm} }
+func newSnapshot(fsm *FSM) raft.FSMSnapshot { return &Snapshot{fsm: fsm} }
 
-func (i *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
+func (i *Snapshot) Persist(sink raft.SnapshotSink) error {
 	i.Lock()
 	snapshotData, err := i.fsm.ser.Marshal(i.fsm.services)
 	if err != nil {
@@ -128,4 +128,4 @@ func (i *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
 	return err
 }
 
-func (i *FSMSnapshot) Release() { i.Unlock() }
+func (i *Snapshot) Release() { i.Unlock() }

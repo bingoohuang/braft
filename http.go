@@ -78,7 +78,7 @@ func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
 }
 
 func GetFuncName(i interface{}) string {
-	strs := strings.Split((runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()), ".")
+	strs := strings.Split(runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name(), ".")
 	return strs[len(strs)-1]
 }
 
@@ -109,7 +109,7 @@ type RaftNode struct {
 	AppVersion     string
 }
 
-// ServeRaft services the the raft http api.
+// ServeRaft services the raft http api.
 func (n *Node) ServeRaft(ctx *gin.Context) {
 	var nodes []RaftNode
 	for _, server := range n.Raft.GetConfiguration().Configuration().Servers {

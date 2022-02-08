@@ -3,6 +3,7 @@ package braft
 import (
 	"context"
 	"errors"
+	"google.golang.org/grpc/credentials/insecure"
 	"strings"
 
 	"github.com/bingoohuang/braft/discovery"
@@ -20,7 +21,7 @@ func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 	}
 
 	addr = strings.Replace(addr, "0.0.0.0", "127.0.0.1", 1)
-	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock(), grpc.EmptyDialOption{})
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.EmptyDialOption{})
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +38,7 @@ func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 // GetPeerDetails returns the remote peer details.
 func GetPeerDetails(addr string) (*proto.GetDetailsResponse, error) {
 	addr = strings.Replace(addr, "0.0.0.0", "127.0.0.1", 1)
-	c, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock(), grpc.EmptyDialOption{})
+	c, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.EmptyDialOption{})
 	if err != nil {
 		return nil, err
 	}

@@ -9,10 +9,10 @@ import (
 
 // Marshaler interface is to provide serialize and deserialize methods for BRaft Node
 type Marshaler interface {
-	// Serialize is used to serialize and data to a []byte
+	// Marshal is used to serialize and data to a []byte
 	Marshal(data interface{}) ([]byte, error)
 
-	// Deserialize is used to deserialize []byte to interface{}
+	// Unmarshal is used to deserialize []byte to interface{}
 	Unmarshal(data []byte, v interface{}) error
 }
 

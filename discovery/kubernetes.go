@@ -36,10 +36,10 @@ func NewKubernetesDiscovery() Discovery {
 }
 
 // Name gives the name of the discovery.
-func (d *kubernetesDiscovery) Name() string {
-	return "k8s://ns=" + d.namespace +
-		"/labels=" + util.MapToString(d.serviceLabels, ",", "=") +
-		"/portName=" + d.portName
+func (k *kubernetesDiscovery) Name() string {
+	return "k8s://ns=" + k.namespace +
+		"/labels=" + util.MapToString(k.serviceLabels, ",", "=") +
+		"/portName=" + k.portName
 }
 
 func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {

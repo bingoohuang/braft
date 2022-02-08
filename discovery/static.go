@@ -19,18 +19,18 @@ func (k *staticDiscovery) Search() (dest []string, err error) {
 }
 
 // Name gives the name of the discovery.
-func (d *staticDiscovery) Name() string { return "static://" + strings.Join(d.Peers, ",") }
+func (k *staticDiscovery) Name() string { return "static://" + strings.Join(k.Peers, ",") }
 
-func (d *staticDiscovery) Stop() {}
+func (k *staticDiscovery) Stop() {}
 
-func (d *staticDiscovery) IsStatic() bool { return true }
+func (k *staticDiscovery) IsStatic() bool { return true }
 
-func (d *staticDiscovery) Start(_ string, _ int) (chan string, error) {
+func (k *staticDiscovery) Start(_ string, _ int) (chan string, error) {
 	go func() {
-		for _, peer := range d.Peers {
-			d.discoveryChan <- peer
+		for _, peer := range k.Peers {
+			k.discoveryChan <- peer
 		}
-		close(d.discoveryChan)
+		close(k.discoveryChan)
 	}()
-	return d.discoveryChan, nil
+	return k.discoveryChan, nil
 }

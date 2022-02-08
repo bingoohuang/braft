@@ -59,20 +59,20 @@ func main() {
 
 ## env VARIABLES
 
-NAME | ACRONYM | USAGE | DEFAULT | EXAMPELE
----|---|---|---|---
-GOLOG_STDOUT|N/A| print log on stdout| N/A| `export GOLOG_STDOUT=true`
-BRAFT_DISCOVERY| BDI| discovery configuration |mdns:_braft._tcp | `export BRAFT_DISCOVERY="mdns:_braft._tcp"`<p>`export BRAFT_DISCOVERY="static:192.168.1.1,192.168.1.2,192.168.1.3"`<p>`export BRAFT_DISCOVERY="k8s"`
-BRAFT_IP|BIP|specify the IP| first host IP | `export BRAFT_IP=192.168.1.1`
-BRAFT_IF|BIF|specify the IF name| N/A | `export BRAFT_IF=eth0`
-BRAFT_RPORT|BRP|specify the raft port| 15000 | `export BRAFT_RPORT=15000`
-BRAFT_DPORT|BDP|specify the discovery port| BRAFT_RPORT+1 | `export BRAFT_DPORT=15001`
-BRAFT_HPORT|BHP|specify the http port| BRAFT_DPORT+1 | `export BRAFT_HPORT=15002`
-BRAFT_SLEEP|BSL|random sleep to startup raft cluster | 100ms-3s | `export BRAFT_SLEEP=100ms-3s`
-K8S_NAMESPACE|K8N| k8s namespace | (empty)| `export K8S_NAMESPACE=prod`
-K8S_LABELS|K8L| service labels | (empty)| `export K8S_LABELS=svc=braft`
-K8S_PORTNAME|K8P| container tcp port name | (empty)| `export K8S_PORTNAME=http`
-K8S_SLEEP|N/A| k8s discovery sleep before start | 15-30s | `export K8S_SLEEP=30-50s`
+| NAME            | ACRONYM | USAGE                                | DEFAULT          | EXAMPELE                                                                                                                                             |
+|-----------------|---------|--------------------------------------|------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| GOLOG_STDOUT    | N/A     | print log on stdout                  | N/A              | `export GOLOG_STDOUT=true`                                                                                                                           |
+| BRAFT_DISCOVERY | BDI     | discovery configuration              | mdns:_braft._tcp | `export BRAFT_DISCOVERY="mdns:_braft._tcp"`<p>`export BRAFT_DISCOVERY="static:192.168.1.1,192.168.1.2,192.168.1.3"`<p>`export BRAFT_DISCOVERY="k8s"` |
+| BRAFT_IP        | BIP     | specify the IP                       | first host IP    | `export BRAFT_IP=192.168.1.1`                                                                                                                        |
+| BRAFT_IF        | BIF     | specify the IF name                  | N/A              | `export BRAFT_IF=eth0`                                                                                                                               |
+| BRAFT_RPORT     | BRP     | specify the raft port                | 15000            | `export BRAFT_RPORT=15000`                                                                                                                           |
+| BRAFT_DPORT     | BDP     | specify the discovery port           | BRAFT_RPORT+1    | `export BRAFT_DPORT=15001`                                                                                                                           |
+| BRAFT_HPORT     | BHP     | specify the http port                | BRAFT_DPORT+1    | `export BRAFT_HPORT=15002`                                                                                                                           |
+| BRAFT_SLEEP     | BSL     | random sleep to startup raft cluster | 100ms-3s         | `export BRAFT_SLEEP=100ms-3s`                                                                                                                        |
+| K8S_NAMESPACE   | K8N     | k8s namespace                        | (empty)          | `export K8S_NAMESPACE=prod`                                                                                                                          |
+| K8S_LABELS      | K8L     | service labels                       | (empty)          | `export K8S_LABELS=svc=braft`                                                                                                                        |
+| K8S_PORTNAME    | K8P     | container tcp port name              | (empty)          | `export K8S_PORTNAME=http`                                                                                                                           |
+| K8S_SLEEP       | N/A     | k8s discovery sleep before start     | 15-30s           | `export K8S_SLEEP=30-50s`                                                                                                                            |
 
 ## demo
 

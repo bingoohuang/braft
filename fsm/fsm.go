@@ -8,7 +8,7 @@ type Service interface {
 	// in this method we can handle what should happen when we got a new raft log regarding our FSM service
 	NewLog(shortNodeID string, request interface{}) interface{}
 
-	// GetReqDataTypes returns all the request structs which are used by this FSMService
+	// GetReqDataType returns all the request structs which are used by this FSMService
 	GetReqDataType() interface{}
 
 	// ApplySnapshot is used to decode and apply a snapshot to the FSMService

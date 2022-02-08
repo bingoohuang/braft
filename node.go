@@ -3,6 +3,7 @@ package braft
 import (
 	"encoding/base64"
 	"fmt"
+	"google.golang.org/grpc/credentials/insecure"
 	"io"
 	"io/ioutil"
 	"log"
@@ -173,7 +174,8 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	// default raft config
 	addr := fmt.Sprintf("%s:%d", EnvIP, EnvRport)
 	// grpc transport, Transpot Raft节点之间的通信通道
-	t := transport.New(raft.ServerAddress(addr), []ggrpc.DialOption{ggrpc.WithInsecure()})
+	t := transport.New(raft.ServerAddress(addr),
+		[]ggrpc.DialOption{ggrpc.WithTransportCredentials(insecure.NewCredentials())})
 
 	// raft server
 	raftServer, err := raft.NewRaft(raftConf, sm, logStore, stableStore, snapshotStore, t.Transport())
@@ -389,7 +391,7 @@ func (n *Node) ShortNodeIds() (nodeIds []string) {
 	return
 }
 
-// Distribute distribute the given bean to all the nodes in the cluster.
+// Distribute distributes the given bean to all the nodes in the cluster.
 func (n *Node) Distribute(bean fsm.Distributable) (interface{}, error) {
 	items := bean.GetDistributableItems()
 	dataLen := n.distributor.Distribute(n.ShortNodeIds(), items)

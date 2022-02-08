@@ -34,26 +34,26 @@ func NewMdnsDiscovery(serviceName string) Discovery {
 }
 
 // Name gives the name of the discovery.
-func (d *mdnsDiscovery) Name() string { return "mdns://" + d.serviceName }
+func (k *mdnsDiscovery) Name() string { return "mdns://" + k.serviceName }
 
-func (d *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) {
-	d.nodeID, d.nodePort = ss.Left(nodeID, 27), nodePort
-	d.ctx, d.cancel = context.WithCancel(context.Background())
+func (k *mdnsDiscovery) Start(nodeID string, nodePort int) (chan string, error) {
+	k.nodeID, k.nodePort = ss.Left(nodeID, 27), nodePort
+	k.ctx, k.cancel = context.WithCancel(context.Background())
 
-	go d.discovery()
+	go k.discovery()
 
-	return d.discoveryChan, nil
+	return k.discoveryChan, nil
 }
 
 func (k *mdnsDiscovery) Search() (dest []string, err error) { return k.tempQueue.Get(), nil }
 
-func (d *mdnsDiscovery) discovery() {
+func (k *mdnsDiscovery) discovery() {
 	// expose mdns server
-	mdnsServer, err := d.exposeMDNS()
+	mdnsServer, err := k.exposeMDNS()
 	if err != nil {
 		log.Fatal(err)
 	}
-	d.mdnsServer = mdnsServer
+	k.mdnsServer = mdnsServer
 
 	// fetch mDNS enabled raft nodes
 	resolver, err := zeroconf.NewResolver(nil)
@@ -64,13 +64,13 @@ func (d *mdnsDiscovery) discovery() {
 	go func() {
 		for {
 			select {
-			case <-d.ctx.Done():
+			case <-k.ctx.Done():
 				return
 			case entry := <-entries:
 				if entry != nil {
 					value := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
-					d.discoveryChan <- value
-					d.tempQueue.Put(value)
+					k.discoveryChan <- value
+					k.tempQueue.Put(value)
 				}
 			}
 		}
@@ -78,10 +78,10 @@ func (d *mdnsDiscovery) discovery() {
 
 	for {
 		select {
-		case <-d.ctx.Done():
+		case <-k.ctx.Done():
 			return
 		default:
-			if err = resolver.Browse(d.ctx, d.serviceName, "local.", entries); err != nil {
+			if err = resolver.Browse(k.ctx, k.serviceName, "local.", entries); err != nil {
 				log.Printf("Error during mDNS lookup: %v", err)
 			}
 			util.RandSleep(time.Second, 5*time.Second, false)
@@ -89,13 +89,13 @@ func (d *mdnsDiscovery) discovery() {
 	}
 }
 
-func (d *mdnsDiscovery) exposeMDNS() (*zeroconf.Server, error) {
-	return zeroconf.Register(d.nodeID, d.serviceName, "local.", d.nodePort, []string{"txtv=0", "lo=1", "la=2"}, nil)
+func (k *mdnsDiscovery) exposeMDNS() (*zeroconf.Server, error) {
+	return zeroconf.Register(k.nodeID, k.serviceName, "local.", k.nodePort, []string{"txtv=0", "lo=1", "la=2"}, nil)
 }
 
-func (d *mdnsDiscovery) IsStatic() bool { return false }
+func (k *mdnsDiscovery) IsStatic() bool { return false }
 
-func (d *mdnsDiscovery) Stop() {
-	d.cancel()
-	d.mdnsServer.Shutdown()
+func (k *mdnsDiscovery) Stop() {
+	k.cancel()
+	k.mdnsServer.Shutdown()
 }

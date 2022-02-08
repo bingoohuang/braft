@@ -95,7 +95,7 @@ func (d *DemoHandler) accept(nodeID string, request interface{}) {
 	log.Printf("got %d items: %s", len(dd.Items), codec.Json(dd))
 }
 
-func (d *DemoHandler) distributeGet(ctx *gin.Context, n *braft.Node) {
+func (d *DemoHandler) distributeGet(ctx *gin.Context, _ *braft.Node) {
 	ctx.JSON(http.StatusOK, d.DD)
 }
 
