@@ -36,37 +36,16 @@ Usage of %s:
 // VersionInfo is optional for customized version.
 func (a Arg) VersionInfo() string { return v.Version() }
 
-type DemoDistributionItem struct {
-	ID     string
-	NodeID string
-}
-
-var _ fsm.DistributableItem = (*DemoDistributionItem)(nil)
-
-func (d *DemoDistributionItem) GetItemID() string       { return d.ID }
-func (d *DemoDistributionItem) SetNodeID(nodeID string) { d.NodeID = nodeID }
-
-func makeRandItems(q string) (ret []DemoDistributionItem) {
-	n, _ := strconv.Atoi(q)
-	if n <= 0 {
-		n = randx.IntN(20)
-	}
-
-	for i := 0; i < n; i++ {
-		ret = append(ret, DemoDistributionItem{ID: fmt.Sprintf("%d", i)})
-	}
-
-	return
-}
-
 func main() {
 	c := &Arg{}
 	flagparse.Parse(c)
 
 	golog.Setup()
+
+	dh := &DemoHandler{}
 	node, err := braft.NewNode(braft.WithServices(
 		fsm.NewMemKvService(),
-		fsm.NewDistributeService(accept)))
+		fsm.NewDistributeService(dh.accept)))
 	if err != nil {
 		log.Fatalf("failed to new node, error: %v", err)
 	}
@@ -80,8 +59,21 @@ func main() {
 			log.Printf("becameLeader: %v", becameLeader)
 		}
 	}()
-	node.RunHTTP(braft.WithHandler("POST", "/distribute", distribute))
+	node.RunHTTP(
+		braft.WithHandler(http.MethodPost, "/distribute", dh.distributePost),
+		braft.WithHandler(http.MethodGet, "/distribute", dh.distributeGet),
+	)
 }
+
+type DemoDistributionItem struct {
+	ID     string
+	NodeID string
+}
+
+var _ fsm.DistributableItem = (*DemoDistributionItem)(nil)
+
+func (d *DemoDistributionItem) GetItemID() string       { return d.ID }
+func (d *DemoDistributionItem) SetNodeID(nodeID string) { d.NodeID = nodeID }
 
 type DemoDistribution struct {
 	Items  []DemoDistributionItem
@@ -90,19 +82,41 @@ type DemoDistribution struct {
 
 func (d *DemoDistribution) GetDistributableItems() interface{} { return d.Items }
 
-func accept(nodeID string, request interface{}) {
+type DemoHandler struct {
+	DD *DemoDistribution
+}
+
+func (d *DemoHandler) accept(nodeID string, request interface{}) {
 	dd := request.(*DemoDistribution)
 	dd.Items = funk.Filter(dd.Items, func(item DemoDistributionItem) bool {
 		return item.NodeID == nodeID
 	}).([]DemoDistributionItem)
+	d.DD = dd
 	log.Printf("got %d items: %s", len(dd.Items), codec.Json(dd))
 }
 
-func distribute(ctx *gin.Context, n *braft.Node) {
+func (d *DemoHandler) distributeGet(ctx *gin.Context, n *braft.Node) {
+	ctx.JSON(http.StatusOK, d.DD)
+}
+
+func (d *DemoHandler) distributePost(ctx *gin.Context, n *braft.Node) {
 	dd := &DemoDistribution{Items: makeRandItems(ctx.Query("n")), Common: ksuid.New().String()}
 	if result, err := n.Distribute(dd); err != nil {
 		ctx.JSON(http.StatusInternalServerError, err.Error())
 	} else {
 		ctx.JSON(http.StatusOK, result)
 	}
+}
+
+func makeRandItems(q string) (ret []DemoDistributionItem) {
+	n, _ := strconv.Atoi(q)
+	if n <= 0 {
+		n = randx.IntN(20)
+	}
+
+	for i := 0; i < n; i++ {
+		ret = append(ret, DemoDistributionItem{ID: fmt.Sprintf("%d", i)})
+	}
+
+	return
 }

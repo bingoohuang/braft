@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
+	"runtime"
 	"strings"
 	"time"
 
@@ -19,13 +21,14 @@ import (
 // HTTPConfig is configuration for HTTP service.
 type HTTPConfig struct {
 	EnableKv bool
-	Handlers map[string]pathHalder
+	Handlers []pathHalder
 }
 
 // HandlerFunc defines the handler used by gin middleware as return value.
 type HandlerFunc func(ctx *gin.Context, n *Node)
 
 type pathHalder struct {
+	method  string
 	path    string
 	handler HandlerFunc
 }
@@ -38,12 +41,14 @@ func WithEnableKV(b bool) HTTPConfigFn { return func(c *HTTPConfig) { c.EnableKv
 
 // WithHandler defines the http handler.
 func WithHandler(method, path string, handler HandlerFunc) HTTPConfigFn {
-	return func(c *HTTPConfig) { c.Handlers[method] = pathHalder{path: path, handler: handler} }
+	return func(c *HTTPConfig) {
+		c.Handlers = append(c.Handlers, pathHalder{method: method, path: path, handler: handler})
+	}
 }
 
 // RunHTTP run http service on block.
 func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
-	c := &HTTPConfig{EnableKv: true, Handlers: map[string]pathHalder{}}
+	c := &HTTPConfig{EnableKv: true}
 	for _, f := range fs {
 		f(c)
 	}
@@ -59,15 +64,22 @@ func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
 		r.DELETE("/kv", n.ServeKV)
 	}
 
-	for method, handler := range c.Handlers {
-		r.Handle(method, handler.path, func(ctx *gin.Context) {
-			handler.handler(ctx, n)
+	for _, h := range c.Handlers {
+		hh := h.handler
+		log.Printf("register method: %s path: %s handler: %s", h.method, h.path, GetFuncName(hh))
+		r.Handle(h.method, h.path, func(ctx *gin.Context) {
+			hh(ctx, n)
 		})
 	}
 
 	if err := r.Run(fmt.Sprintf(":%d", EnvHport)); err != nil {
 		log.Fatalf("failed to run %d, error: %v", EnvHport, err)
 	}
+}
+
+func GetFuncName(i interface{}) string {
+	strs := strings.Split((runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()), ".")
+	return strs[len(strs)-1]
 }
 
 func getQuery(ctx *gin.Context, k ...string) string {
