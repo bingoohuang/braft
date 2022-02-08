@@ -83,85 +83,100 @@ Host: localhost:15002
 Accept: application/json
 Accept-Encoding: gzip, deflate
 Content-Type: application/json
+Gurl-Date: Tue, 08 Feb 2022 14:09:48 GMT
 User-Agent: gurl/0.1.0
 
 
 HTTP/1.1 200 OK
 Content-Type: application/json; charset=utf-8
-Date: Fri, 28 Jan 2022 10:12:23 GMT
-Content-Length: 1644
+Date: Tue, 08 Feb 2022 14:09:48 GMT
 
 {
   "CurrentLeader": true,
-  "Discovery": "mdns:_braft._tcp",
-  "Leader": "192.168.162.88:15000",
+  "Discovery": "mdns://_braft._tcp",
+  "Leader": "192.168.0.103:15000",
   "NodeNum": 3,
   "Nodes": [
     {
-      "Leader": "192.168.162.88:15000",
-      "ServerID": "hqJJRLsyNEsxeWM4ZUw2T3pMM0xDaUk1MHFaNGZFTE2lUnBvcnTNOpilRHBvcnTNOpmlSHBvcnTNOpqoSG9zdG5hbWWlYm9nb26iSVCUrjE5Mi4xNjguMTYyLjg4rjE5Mi4xNjguMjE3LjE5qzE3Mi4xNi42Ny4xrTE5Mi4xNjguMjI4LjE",
-      "Address": "192.168.162.88:15000",
+      "Leader": "192.168.0.103:15000",
+      "ServerID": "hqJJRLsyNHBZeUliV0YxaVpwRHlSTlZzcjd6SDhuSG2lUnBvcnTNOpilRHBvcnTNOpmlSHBvcnTNOpqoSG9zdG5hbWWpbG9jYWxob3N0oklQka0xOTIuMTY4LjAuMTAz",
+      "Address": "192.168.0.103:15000",
       "RaftState": "Leader",
-      "RaftPort": 15000,
-      "DiscoveryPort": 15001,
-      "HTTPPort": 15002,
       "RaftID": {
-        "ID": "24K1yc8eL6OzL3LCiI50qZ4fELM",
+        "ID": "24pYyIbWF1iZpDyRNVsr7zH8nHm",
         "Rport": 15000,
         "Dport": 15001,
         "Hport": 15002,
-        "Hostname": "bogon",
+        "Hostname": "localhost",
         "IP": [
-          "192.168.162.88",
-          "192.168.217.19",
-          "172.16.67.1",
-          "192.168.228.1"
+          "192.168.0.103"
         ]
-      }
+      },
+      "DiscoveryNodes": [
+        "192.168.0.103:17000",
+        "192.168.0.103:15000",
+        "192.168.0.103:16000"
+      ],
+      "StartTime": "2022-02-08T22:07:27.941626+08:00",
+      "Duration": "2m20.548861052s",
+      "GitCommit": "22b4c8a@2022-02-08T21:57:51+08:00",
+      "BuildTime": "2022-02-08T22:06:22+0800",
+      "GoVersion": "go1.17.6_darwin/amd64",
+      "AppVersion": "1.0.0"
     },
     {
-      "Leader": "192.168.162.88:15000",
-      "ServerID": "hqJJRLsyNEsxelYzcjJMeXZ3MmkzWmQxNTQ2TmtFcWmlUnBvcnTN3_2lRHBvcnTN3_6lSHBvcnTN3_-oSG9zdG5hbWWlYm9nb26iSVCUrjE5Mi4xNjguMTYyLjg4rjE5Mi4xNjguMjE3LjE5qzE3Mi4xNi42Ny4xrTE5Mi4xNjguMjI4LjE",
-      "Address": "192.168.217.19:57341",
+      "Leader": "192.168.0.103:15000",
+      "ServerID": "hqJJRLsyNHBZejRnYjZRTFM3cmpINFBGMzkxcEY4Y1OlUnBvcnTNPoClRHBvcnTNPoGlSHBvcnTNPoKoSG9zdG5hbWWpbG9jYWxob3N0oklQka0xOTIuMTY4LjAuMTAz",
+      "Address": "192.168.0.103:16000",
       "RaftState": "Follower",
-      "RaftPort": 57341,
-      "DiscoveryPort": 57342,
-      "HTTPPort": 57343,
       "RaftID": {
-        "ID": "24K1zV3r2Lyvw2i3Zd1546NkEqi",
-        "Rport": 57341,
-        "Dport": 57342,
-        "Hport": 57343,
-        "Hostname": "bogon",
+        "ID": "24pYz4gb6QLS7rjH4PF391pF8cS",
+        "Rport": 16000,
+        "Dport": 16001,
+        "Hport": 16002,
+        "Hostname": "localhost",
         "IP": [
-          "192.168.162.88",
-          "192.168.217.19",
-          "172.16.67.1",
-          "192.168.228.1"
+          "192.168.0.103"
         ]
-      }
+      },
+      "DiscoveryNodes": [
+        "192.168.0.103:17000",
+        "192.168.0.103:16000",
+        "192.168.0.103:15000"
+      ],
+      "StartTime": "2022-02-08T22:07:34.031526+08:00",
+      "Duration": "2m14.45963851s",
+      "GitCommit": "22b4c8a@2022-02-08T21:57:51+08:00",
+      "BuildTime": "2022-02-08T22:06:22+0800",
+      "GoVersion": "go1.17.6_darwin/amd64",
+      "AppVersion": "1.0.0"
     },
     {
-      "Leader": "192.168.162.88:15000",
-      "ServerID": "hqJJRLsyNEsyMDJNcGZ5d1BNNk1aOTEzSkhyeUVJb3WlUnBvcnTN4BqlRHBvcnTN4BulSHBvcnTN4ByoSG9zdG5hbWWlYm9nb26iSVCUrjE5Mi4xNjguMTYyLjg4rjE5Mi4xNjguMjE3LjE5qzE3Mi4xNi42Ny4xrTE5Mi4xNjguMjI4LjE",
-      "Address": "192.168.217.19:57370",
+      "Leader": "192.168.0.103:15000",
+      "ServerID": "hqJJRLsyNHBZemxxRWFxTHNuMHdxQ3p3clY4ZnJGZVWlUnBvcnTNQmilRHBvcnTNQmmlSHBvcnTNQmqoSG9zdG5hbWWpbG9jYWxob3N0oklQka0xOTIuMTY4LjAuMTAz",
+      "Address": "192.168.0.103:17000",
       "RaftState": "Follower",
-      "RaftPort": 57370,
-      "DiscoveryPort": 57371,
-      "HTTPPort": 57372,
       "RaftID": {
-        "ID": "24K202MpfywPM6MZ913JHryEIou",
-        "Rport": 57370,
-        "Dport": 57371,
-        "Hport": 57372,
-        "Hostname": "bogon",
+        "ID": "24pYzlqEaqLsn0wqCzwrV8frFeU",
+        "Rport": 17000,
+        "Dport": 17001,
+        "Hport": 17002,
+        "Hostname": "localhost",
         "IP": [
-          "192.168.162.88",
-          "192.168.217.19",
-          "172.16.67.1",
-          "192.168.228.1"
+          "192.168.0.103"
         ]
-      }
+      },
+      "DiscoveryNodes": [
+        "192.168.0.103:16000",
+        "192.168.0.103:15000",
+        "192.168.0.103:17000"
+      ],
+      "StartTime": "2022-02-08T22:07:39.590406+08:00",
+      "Duration": "2m8.90139164s",
+      "GitCommit": "22b4c8a@2022-02-08T21:57:51+08:00",
+      "BuildTime": "2022-02-08T22:06:22+0800",
+      "GoVersion": "go1.17.6_darwin/amd64",
+      "AppVersion": "1.0.0"
     }
   ]
 }
