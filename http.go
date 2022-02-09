@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"reflect"
-	"runtime"
 	"strings"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/fn"
 
 	"github.com/bingoohuang/braft/fsm"
 	"github.com/bingoohuang/braft/util"
@@ -66,7 +66,7 @@ func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
 
 	for _, h := range c.Handlers {
 		hh := h.handler
-		log.Printf("register method: %s path: %s handler: %s", h.method, h.path, GetFuncName(hh))
+		log.Printf("register method: %s path: %s handler: %s", h.method, h.path, fn.GetFuncName(hh))
 		r.Handle(h.method, h.path, func(ctx *gin.Context) {
 			hh(ctx, n)
 		})
@@ -75,11 +75,6 @@ func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
 	if err := r.Run(fmt.Sprintf(":%d", EnvHport)); err != nil {
 		log.Fatalf("failed to run %d, error: %v", EnvHport, err)
 	}
-}
-
-func GetFuncName(i interface{}) string {
-	strs := strings.Split(runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name(), ".")
-	return strs[len(strs)-1]
 }
 
 func getQuery(ctx *gin.Context, k ...string) string {

@@ -3,8 +3,9 @@ package braft
 import (
 	"context"
 	"errors"
-	"google.golang.org/grpc/credentials/insecure"
 	"strings"
+
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/proto"

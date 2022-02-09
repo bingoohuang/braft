@@ -3,7 +3,6 @@ package braft
 import (
 	"encoding/base64"
 	"fmt"
-	"google.golang.org/grpc/credentials/insecure"
 	"io"
 	"io/ioutil"
 	"log"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"sync/atomic"
 	"time"
+
+	"google.golang.org/grpc/credentials/insecure"
 
 	transport "github.com/Jille/raft-grpc-transport"
 	"github.com/bingoohuang/braft/discovery"
