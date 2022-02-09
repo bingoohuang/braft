@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/sigx"
 	"log"
 	"net/http"
 	"os"
@@ -119,4 +120,13 @@ func makeRandItems(q string) (ret []DemoDistributionItem) {
 	}
 
 	return
+}
+
+func init() {
+	// 注册性能采集信号，用法:
+	// 第一步，通知开始采集：touch jj.cpu; kill -USR1 `pidof dsvs2`;
+	// 第二部，压力测试开始（或者其他手工测试，等待程序运行一段时间，比如5分钟）
+	// 第三步，通知结束采集，生成 cpu.profile 文件，命令与第一步相同
+	// 第四步，下载 cpu.profile 文件，`go tool pprof -http :9402 cpu.profile` 开启浏览器查看
+	sigx.RegisterSignalProfile(nil)
 }
