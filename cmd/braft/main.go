@@ -129,5 +129,5 @@ func init() {
 	// 第二部，压力测试开始（或者其他手工测试，等待程序运行一段时间，比如5分钟）
 	// 第三步，通知结束采集，生成 cpu.profile 文件，命令与第一步相同
 	// 第四步，下载 cpu.profile 文件，`go tool pprof -http :9402 cpu.profile` 开启浏览器查看
-	sigx.RegisterSignalProfile(nil)
+	sigx.RegisterSignalProfile()
 }
