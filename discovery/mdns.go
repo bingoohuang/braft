@@ -3,12 +3,11 @@ package discovery
 import (
 	"context"
 	"fmt"
-	"log"
-	"time"
-
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/grandcat/zeroconf"
+	"log"
+	"time"
 )
 
 type mdnsDiscovery struct {
@@ -49,7 +48,8 @@ func (k *mdnsDiscovery) Search() (dest []string, err error) { return k.tempQueue
 
 func (k *mdnsDiscovery) discovery() {
 	// expose mdns server
-	mdnsServer, err := k.exposeMDNS()
+	mdnsServer, err := zeroconf.Register(k.nodeID, k.serviceName,
+		"local.", k.nodePort, []string{"txtv=0", "lo=1", "la=2"}, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -76,21 +76,12 @@ func (k *mdnsDiscovery) discovery() {
 		}
 	}()
 
-	for {
-		select {
-		case <-k.ctx.Done():
-			return
-		default:
-			if err = resolver.Browse(k.ctx, k.serviceName, "local.", entries); err != nil {
-				log.Printf("Error during mDNS lookup: %v", err)
-			}
-			util.RandSleep(time.Second, 5*time.Second, false)
-		}
-	}
-}
+	ctx, cancel := context.WithTimeout(k.ctx, 15*time.Second)
+	defer cancel()
 
-func (k *mdnsDiscovery) exposeMDNS() (*zeroconf.Server, error) {
-	return zeroconf.Register(k.nodeID, k.serviceName, "local.", k.nodePort, []string{"txtv=0", "lo=1", "la=2"}, nil)
+	if err = resolver.Browse(ctx, k.serviceName, "local.", entries); err != nil {
+		log.Printf("Error during mDNS lookup: %v", err)
+	}
 }
 
 func (k *mdnsDiscovery) IsStatic() bool { return false }
