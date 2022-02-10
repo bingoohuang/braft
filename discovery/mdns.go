@@ -3,11 +3,12 @@ package discovery
 import (
 	"context"
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/grandcat/zeroconf"
-	"log"
-	"time"
 )
 
 type mdnsDiscovery struct {
