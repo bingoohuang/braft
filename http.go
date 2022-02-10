@@ -98,10 +98,15 @@ type RaftNode struct {
 	DiscoveryNodes []string
 	StartTime      string
 	Duration       string
-	GitCommit      string
-	BuildTime      string
-	GoVersion      string
-	AppVersion     string
+
+	Rss        uint64
+	RaftLogSum uint64
+	Pid        uint64
+
+	GitCommit  string
+	BuildTime  string
+	GoVersion  string
+	AppVersion string
 }
 
 // ServeRaft services the raft http api.
@@ -123,10 +128,15 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 				DiscoveryNodes: rsp.DiscoveryNodes,
 				StartTime:      rsp.StartTime,
 				Duration:       rsp.Duration,
-				GitCommit:      v.GitCommit,
-				BuildTime:      v.BuildTime,
-				GoVersion:      v.GoVersion,
-				AppVersion:     v.AppVersion,
+
+				Rss:        rsp.Rss,
+				RaftLogSum: rsp.RaftLogSum,
+				Pid:        rsp.Pid,
+
+				GitCommit:  v.GitCommit,
+				BuildTime:  v.BuildTime,
+				GoVersion:  v.GoVersion,
+				AppVersion: v.AppVersion,
 			})
 		}
 	}

@@ -3,6 +3,9 @@ package braft
 import (
 	"context"
 	"errors"
+	"os"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/bingoohuang/braft/discovery"
@@ -40,7 +43,7 @@ func (s *ClientGrpcServices) ApplyLog(_ context.Context, r *proto.ApplyRequest) 
 var ErrNone = errors.New("")
 
 // GetDetails returns the node details.
-func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsRequest) (*proto.GetDetailsResponse, error) {
+func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsRequest) (response *proto.GetDetailsResponse, err error) {
 	var resultErr error
 	var discoveryNodes []string
 	if search, ok := s.Node.Conf.Discovery.(discovery.Searchable); ok {
@@ -53,6 +56,8 @@ func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsReques
 	if resultErr == nil {
 		resultErr = ErrNone
 	}
+
+	os.Getpid()
 	return &proto.GetDetailsResponse{
 		ServerId:       s.Node.ID,
 		RaftState:      s.Node.Raft.State().String(),
@@ -64,5 +69,12 @@ func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsReques
 		DiscoveryNodes: discoveryNodes,
 		StartTime:      s.Node.StartTime.Format(time.RFC3339Nano),
 		Duration:       time.Since(s.Node.StartTime).String(),
+		Rss: func() uint64 {
+			var mem syscall.Rusage
+			_ = syscall.Getrusage(syscall.RUSAGE_SELF, &mem)
+			return uint64(mem.Maxrss)
+		}(),
+		RaftLogSum: atomic.LoadUint64(s.Node.raftLogSum),
+		Pid:        uint64(os.Getpid()),
 	}, nil
 }

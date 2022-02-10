@@ -27,11 +27,11 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
-	raftboltdb "github.com/hashicorp/raft-boltdb"
+	"github.com/hashicorp/raft-boltdb"
 	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack/v5"
-	ggrpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 )
 
 // Node is the raft cluster node.
@@ -40,7 +40,7 @@ type Node struct {
 	RaftID           RaftID
 	addr             string
 	Raft             *raft.Raft
-	GrpcServer       *ggrpc.Server
+	GrpcServer       *grpc.Server
 	TransportManager *transport.Manager
 	discoveryConfig  *memberlist.Config
 	mList            *memberlist.Memberlist
@@ -49,6 +49,7 @@ type Node struct {
 
 	StartTime   time.Time
 	distributor *fsm.Distributor
+	raftLogSum  *uint64
 }
 
 // Config is the configuration of the node.
@@ -176,7 +177,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	addr := fmt.Sprintf("%s:%d", EnvIP, EnvRport)
 	// grpc transport, Transpot Raft节点之间的通信通道
 	t := transport.New(raft.ServerAddress(addr),
-		[]ggrpc.DialOption{ggrpc.WithTransportCredentials(insecure.NewCredentials())})
+		[]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())})
 
 	// raft server
 	raftServer, err := raft.NewRaft(raftConf, sm, logStore, stableStore, snapshotStore, t.Transport())
@@ -193,6 +194,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 		Conf:             nodeConfig,
 		discoveryConfig:  discoveryConfig,
 		distributor:      fsm.NewDistributor(),
+		raftLogSum:       &sm.RaftLogSum,
 	}, nil
 }
 
@@ -231,8 +233,7 @@ func (n *Node) Start() error {
 	if err != nil {
 		return err
 	}
-	n.GrpcServer = ggrpc.NewServer()
-
+	n.GrpcServer = grpc.NewServer()
 	// register management services
 	n.TransportManager.Register(n.GrpcServer)
 
@@ -436,7 +437,7 @@ func (l *logger) With(args ...interface{}) hclog.Logger { return l }
 func (l *logger) Name() string                          { return "" }
 func (l *logger) Named(name string) hclog.Logger        { return l }
 func (l *logger) ResetNamed(name string) hclog.Logger   { return l }
-func (l *logger) SetLevel(level hclog.Level)            {}
+func (l *logger) SetLevel(hclog.Level)                  {}
 
-func (l *logger) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger { return nil }
-func (l *logger) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer   { return nil }
+func (l *logger) StandardLogger(*hclog.StandardLoggerOptions) *log.Logger { return nil }
+func (l *logger) StandardWriter(*hclog.StandardLoggerOptions) io.Writer   { return nil }

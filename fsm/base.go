@@ -7,6 +7,7 @@ import (
 	"log"
 	"reflect"
 	"sync"
+	"sync/atomic"
 
 	"github.com/bingoohuang/braft/marshal"
 	"github.com/hashicorp/raft"
@@ -17,9 +18,11 @@ type FSM struct {
 	services     []Service
 	reqDataTypes []ReqTypeInfo
 	shortNodeID  string
+
+	RaftLogSum uint64
 }
 
-func NewRoutingFSM(shortNodeID string, services []Service, ser *marshal.TypeRegister) raft.FSM {
+func NewRoutingFSM(shortNodeID string, services []Service, ser *marshal.TypeRegister) *FSM {
 	i := &FSM{
 		services:    services,
 		ser:         ser,
@@ -42,6 +45,8 @@ func (i *FSM) Apply(raftlog *raft.Log) interface{} {
 			log.Printf("E! Unmarshal, error: %v", err)
 			return err
 		}
+
+		atomic.AddUint64(&i.RaftLogSum, uint64(len(raftlog.Data)))
 
 		// routing request to service
 		if target, err := getTargetTypeInfo(i.reqDataTypes, payload); err == nil {
