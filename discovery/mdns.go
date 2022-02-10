@@ -62,26 +62,30 @@ func (k *mdnsDiscovery) discovery() {
 		log.Fatalln("Failed to initialize mDNS resolver:", err.Error())
 	}
 	entries := make(chan *zeroconf.ServiceEntry)
-	go func() {
-		for {
-			select {
-			case <-k.ctx.Done():
-				return
-			case entry := <-entries:
-				if entry != nil {
-					value := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
-					k.discoveryChan <- value
-					k.tempQueue.Put(value)
-				}
-			}
-		}
-	}()
+	go k.receive(entries)
 
 	ctx, cancel := context.WithTimeout(k.ctx, 15*time.Second)
 	defer cancel()
 
 	if err = resolver.Browse(ctx, k.serviceName, "local.", entries); err != nil {
 		log.Printf("Error during mDNS lookup: %v", err)
+	}
+}
+
+func (k *mdnsDiscovery) receive(entries chan *zeroconf.ServiceEntry) {
+	for {
+		select {
+		case <-k.ctx.Done():
+			return
+		case entry, _ := <-entries:
+			if entry == nil {
+				return
+			}
+
+			value := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
+			k.discoveryChan <- value
+			k.tempQueue.Put(value)
+		}
 	}
 }
 
