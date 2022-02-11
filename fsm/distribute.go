@@ -131,12 +131,12 @@ func (d *Distributor) cleanKeysNotIn(nodeIds []string) {
 }
 
 type DistributeService struct {
-	picker NodePicker
+	picker Picker
 }
 
 var _ Service = (*DistributeService)(nil)
 
-func NewDistributeService(picker NodePicker) *DistributeService {
+func NewDistributeService(picker Picker) *DistributeService {
 	return &DistributeService{picker: picker}
 }
 
@@ -154,7 +154,7 @@ func (m *DistributeService) NewLog(nodeID string, request interface{}) interface
 	log.Printf("DistributeService NewLog req: %+v", request)
 
 	req := request.(DistributeRequest)
-	m.picker(nodeID, req.Payload)
+	m.picker.PickForNode(nodeID, req.Payload)
 
 	return nil
 }
@@ -179,4 +179,10 @@ func (s *DistributeRequest) UnmarshalMsgpack(t *marshal.TypeRegister, d []byte) 
 	return
 }
 
-type NodePicker func(node string, request interface{})
+type Picker interface {
+	PickForNode(node string, request interface{})
+}
+
+type PickerFn func(node string, request interface{})
+
+func (f PickerFn) PickForNode(node string, request interface{}) { f(node, request) }
