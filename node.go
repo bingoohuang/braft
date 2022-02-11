@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync/atomic"
 	"time"
 
@@ -382,7 +383,7 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 	return n.ApplyOnLeader(payload)
 }
 
-// ShortNodeIds returns a list of short node IDs of the current raft cluster.
+// ShortNodeIds returns a sorted list of short node IDs of the current raft cluster.
 func (n *Node) ShortNodeIds() (nodeIds []string) {
 	for _, server := range n.Raft.GetConfiguration().Configuration().Servers {
 		var rid RaftID
@@ -390,6 +391,8 @@ func (n *Node) ShortNodeIds() (nodeIds []string) {
 		msgpack.Unmarshal(data, &rid)
 		nodeIds = append(nodeIds, rid.ID)
 	}
+
+	sort.Strings(nodeIds)
 	return
 }
 
@@ -399,7 +402,6 @@ func (n *Node) Distribute(bean fsm.Distributable) (interface{}, error) {
 	dataLen := n.distributor.Distribute(n.ShortNodeIds(), items)
 
 	log.Printf("distribute %d items: %s", dataLen, codec.Json(bean))
-
 	return n.RaftApply(fsm.DistributeRequest{Payload: bean}, time.Second)
 }
 
