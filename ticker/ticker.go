@@ -1,4 +1,4 @@
-package hraftd
+package ticker
 
 import "time"
 
