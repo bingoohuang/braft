@@ -181,3 +181,120 @@ Date: Tue, 08 Feb 2022 14:09:48 GMT
   ]
 }
 ```
+
+```sh
+# gurl :30010/raft
+GET /raft? HTTP/1.1
+Host: localhost:30010
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+User-Agent: gurl/0.1.0
+
+
+HTTP/1.1 200 OK
+Date: Fri, 11 Feb 2022 03:58:50 GMT
+Content-Type: application/json; charset=utf-8
+
+{
+  "CurrentLeader": false,
+  "Discovery": "k8s://ns=footstone-common/labels=svc=braft/portName=",
+  "Leader": "10.42.6.90:15000",
+  "NodeNum": 3,
+  "Nodes": [
+    {
+      "Leader": "10.42.6.90:15000",
+      "ServerID": "hqJJRLsyNHdtNGh1WXJaS0dmS3VBdW80OHRaeHVWTUWlUnBvcnTNOpilRHBvcnTNOpmlSHBvcnTNOpqoSG9zdG5hbWW1YnJhZnQtZDliZmY0YjliLWt6ZGhxoklQkaoxMC40Mi42Ljky",
+      "Address": "10.42.6.92:15000",
+      "RaftState": "Follower",
+      "RaftID": {
+        "ID": "24wm4huYrZKGfKuAuo48tZxuVME",
+        "Rport": 15000,
+        "Dport": 15001,
+        "Hport": 15002,
+        "Hostname": "braft-d9bff4b9b-kzdhq",
+        "IP": [
+          "10.42.6.92"
+        ]
+      },
+      "DiscoveryNodes": [
+        "10.42.6.92",
+        "10.42.6.90",
+        "10.42.6.91"
+      ],
+      "StartTime": "2022-02-11T11:23:53.950293142+08:00",
+      "Duration": "34m56.054300649s",
+      "Rss": 57172,
+      "RaftLogSum": 0,
+      "Pid": 12,
+      "GitCommit": "e4d9145@2022-02-11T10:50:34+08:00",
+      "BuildTime": "2022-02-11T11:23:12+0800",
+      "GoVersion": "go1.17.5_linux/amd64",
+      "AppVersion": "1.0.0",
+      "Pcpu": 2.7027028
+    },
+    {
+      "Leader": "10.42.6.90:15000",
+      "ServerID": "hqJJRLsyNHdtM2VKSEp5WGQ4RWYydDRHT0NWMmpXWE6lUnBvcnTNOpilRHBvcnTNOpmlSHBvcnTNOpqoSG9zdG5hbWW1YnJhZnQtZDliZmY0YjliLXhqYjJjoklQkaoxMC40Mi42Ljkx",
+      "Address": "10.42.6.91:15000",
+      "RaftState": "Follower",
+      "RaftID": {
+        "ID": "24wm3eJHJyXd8Ef2t4GOCV2jWXN",
+        "Rport": 15000,
+        "Dport": 15001,
+        "Hport": 15002,
+        "Hostname": "braft-d9bff4b9b-xjb2c",
+        "IP": [
+          "10.42.6.91"
+        ]
+      },
+      "DiscoveryNodes": [
+        "10.42.6.92",
+        "10.42.6.90",
+        "10.42.6.91"
+      ],
+      "StartTime": "2022-02-11T11:23:45.672142228+08:00",
+      "Duration": "35m4.353394194s",
+      "Rss": 58504,
+      "RaftLogSum": 0,
+      "Pid": 12,
+      "GitCommit": "e4d9145@2022-02-11T10:50:34+08:00",
+      "BuildTime": "2022-02-11T11:23:12+0800",
+      "GoVersion": "go1.17.5_linux/amd64",
+      "AppVersion": "1.0.0",
+      "Pcpu": 2.739726
+    },
+    {
+      "Leader": "10.42.6.90:15000",
+      "ServerID": "hqJJRLsyNHdtMmdDV2lDbmI2SjRINFFydWxSeHZhZFSlUnBvcnTNOpilRHBvcnTNOpmlSHBvcnTNOpqoSG9zdG5hbWW1YnJhZnQtZDliZmY0YjliLWxxdnpuoklQkaoxMC40Mi42Ljkw",
+      "Address": "10.42.6.90:15000",
+      "RaftState": "Leader",
+      "RaftID": {
+        "ID": "24wm2gCWiCnb6J4H4QrulRxvadT",
+        "Rport": 15000,
+        "Dport": 15001,
+        "Hport": 15002,
+        "Hostname": "braft-d9bff4b9b-lqvzn",
+        "IP": [
+          "10.42.6.90"
+        ]
+      },
+      "DiscoveryNodes": [
+        "10.42.6.92",
+        "10.42.6.90",
+        "10.42.6.91"
+      ],
+      "StartTime": "2022-02-11T11:23:37.367006837+08:00",
+      "Duration": "35m12.673937071s",
+      "Rss": 57216,
+      "RaftLogSum": 0,
+      "Pid": 12,
+      "GitCommit": "e4d9145@2022-02-11T10:50:34+08:00",
+      "BuildTime": "2022-02-11T11:23:12+0800",
+      "GoVersion": "go1.17.5_linux/amd64",
+      "AppVersion": "1.0.0",
+      "Pcpu": 2.631579
+    }
+  ]
+}
+```
