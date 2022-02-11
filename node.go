@@ -410,16 +410,20 @@ type logger struct{}
 
 // Log Emit a message and key/value pairs at a provided log level
 func (l *logger) Log(level hclog.Level, msg string, args ...interface{}) {
+	v := append([]interface{}{"D!", msg}, args...)
+
 	switch {
 	case level <= hclog.Debug:
-		log.Print(append([]interface{}{"D!", msg}, args...)...)
+		v[0] = "D!"
 	case level == hclog.Info:
-		log.Print(append([]interface{}{"I!", msg}, args...)...)
+		v[0] = "I!"
 	case level == hclog.Warn:
-		log.Print(append([]interface{}{"W!", msg}, args...)...)
+		v[0] = "W!"
 	case level >= hclog.Error:
-		log.Print(append([]interface{}{"E!", msg}, args...)...)
+		v[0] = "E!"
 	}
+
+	log.Print(v...)
 }
 
 func (l *logger) Trace(msg string, args ...interface{}) { l.Log(hclog.Trace, msg, args...) }
