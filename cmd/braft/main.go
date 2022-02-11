@@ -45,9 +45,7 @@ func main() {
 	golog.Setup()
 
 	dh := &DemoHandler{}
-	node, err := braft.NewNode(braft.WithServices(
-		fsm.NewMemKvService(),
-		fsm.NewDistributeService(dh.accept)))
+	node, err := braft.NewNode(braft.WithServices(fsm.NewMemKvService(), fsm.NewDistributeService(dh)))
 	if err != nil {
 		log.Fatalf("failed to new node, error: %v", err)
 	}
@@ -88,7 +86,7 @@ type DemoHandler struct {
 	DD *DemoDistribution
 }
 
-func (d *DemoHandler) accept(nodeID string, request interface{}) {
+func (d *DemoHandler) PickForNode(nodeID string, request interface{}) {
 	dd := request.(*DemoDistribution)
 	dd.Items = funk.Filter(dd.Items, func(item DemoDistributionItem) bool {
 		return item.NodeID == nodeID
