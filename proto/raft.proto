@@ -24,6 +24,7 @@ message GetDetailsResponse {
   uint64 rss = 11;
   uint64 raftLogSum = 12;
   uint64 pid = 13;
+  float pcpu = 14;
 }
 
 message ApplyRequest {

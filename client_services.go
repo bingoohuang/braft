@@ -3,6 +3,8 @@ package braft
 import (
 	"context"
 	"errors"
+	"github.com/bingoohuang/braft/pidusage"
+	"log"
 	"os"
 	"sync/atomic"
 	"syscall"
@@ -71,8 +73,18 @@ func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsReques
 		Duration:       time.Since(s.Node.StartTime).String(),
 		Rss: func() uint64 {
 			var mem syscall.Rusage
-			_ = syscall.Getrusage(syscall.RUSAGE_SELF, &mem)
+			if err := syscall.Getrusage(syscall.RUSAGE_SELF, &mem); err != nil {
+				log.Printf("E! failed to call syscall.Getrusage, error: %v", err)
+			}
 			return uint64(mem.Maxrss)
+		}(),
+		Pcpu: func() float32 {
+			if stat, err := pidusage.GetStat(os.Getpid()); err != nil {
+				log.Printf("E! failed to call pidusage.GetStat, error: %v", err)
+				return 0
+			} else {
+				return float32(stat.Pcpu)
+			}
 		}(),
 		RaftLogSum: atomic.LoadUint64(s.Node.raftLogSum),
 		Pid:        uint64(os.Getpid()),

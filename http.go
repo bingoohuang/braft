@@ -107,6 +107,7 @@ type RaftNode struct {
 	BuildTime  string
 	GoVersion  string
 	AppVersion string
+	Pcpu       float32
 }
 
 // ServeRaft services the raft http api.
@@ -130,6 +131,7 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 				Duration:       rsp.Duration,
 
 				Rss:        rsp.Rss,
+				Pcpu:       rsp.Pcpu,
 				RaftLogSum: rsp.RaftLogSum,
 				Pid:        rsp.Pid,
 
