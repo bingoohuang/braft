@@ -3,12 +3,13 @@ package braft
 import (
 	"context"
 	"errors"
-	"github.com/bingoohuang/braft/pidusage"
 	"log"
 	"os"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/bingoohuang/braft/pidusage"
 
 	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/proto"
@@ -79,12 +80,12 @@ func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsReques
 			return uint64(mem.Maxrss)
 		}(),
 		Pcpu: func() float32 {
-			if stat, err := pidusage.GetStat(os.Getpid()); err != nil {
+			stat, err := pidusage.GetStat(os.Getpid())
+			if err != nil {
 				log.Printf("E! failed to call pidusage.GetStat, error: %v", err)
 				return 0
-			} else {
-				return float32(stat.Pcpu)
 			}
+			return float32(stat.Pcpu)
 		}(),
 		RaftLogSum: atomic.LoadUint64(s.Node.raftLogSum),
 		Pid:        uint64(os.Getpid()),

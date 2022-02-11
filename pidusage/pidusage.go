@@ -37,15 +37,19 @@ type Stat struct {
 
 type fn func(int) (*Info, error)
 
-var fnMap map[string]fn
-var platform string
-var history map[int]Stat
-var historyLock sync.Mutex
-var eol string
+var (
+	fnMap       map[string]fn
+	platform    string
+	history     map[int]Stat
+	historyLock sync.Mutex
+	eol         string
+)
 
 // Linux platform
-var clkTck float64 = 100    // default
-var pageSize float64 = 4096 // default
+var (
+	clkTck   float64 = 100  // default
+	pageSize float64 = 4096 // default
+)
 
 func init() {
 	platform = runtime.GOOS

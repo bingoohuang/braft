@@ -27,7 +27,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
-	"github.com/hashicorp/raft-boltdb"
+	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack/v5"
