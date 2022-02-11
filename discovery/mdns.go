@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/ss"
@@ -64,10 +63,7 @@ func (k *mdnsDiscovery) discovery() {
 	entries := make(chan *zeroconf.ServiceEntry)
 	go k.receive(entries)
 
-	ctx, cancel := context.WithTimeout(k.ctx, 15*time.Second)
-	defer cancel()
-
-	if err = resolver.Browse(ctx, k.serviceName, "local.", entries); err != nil {
+	if err = resolver.Browse(k.ctx, k.serviceName, "local.", entries); err != nil {
 		log.Printf("Error during mDNS lookup: %v", err)
 	}
 }
@@ -77,9 +73,9 @@ func (k *mdnsDiscovery) receive(entries chan *zeroconf.ServiceEntry) {
 		select {
 		case <-k.ctx.Done():
 			return
-		case entry, _ := <-entries:
-			if entry == nil {
-				return
+		case entry, ok := <-entries:
+			if !ok {
+				break
 			}
 
 			value := fmt.Sprintf("%s:%d", entry.AddrIPv4[0], entry.Port)
