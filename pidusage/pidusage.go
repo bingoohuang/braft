@@ -28,8 +28,6 @@ type Info struct {
 type Stat struct {
 	utime  float64
 	stime  float64
-	cutime float64
-	cstime float64
 	start  float64
 	rss    float64
 	uptime float64
@@ -72,7 +70,8 @@ func init() {
 	fnMap["netbsd"] = wrapProc
 	fnMap["win"] = wrapper("win")
 
-	if platform == "linux" || platform == "netbsd" || platform == "openbsd" {
+	switch platform {
+	case "linux", "netbsd", "openbsd":
 		initProc()
 	}
 }
@@ -121,7 +120,6 @@ func statFromPS(pid int) (*Info, error) {
 }
 
 func statFromProc(pid int) (*Info, error) {
-	sysInfo := &Info{}
 	uptimeFileBytes, err := ioutil.ReadFile(path.Join("/proc", "uptime"))
 	if err != nil {
 		return nil, err
@@ -134,15 +132,13 @@ func statFromProc(pid int) (*Info, error) {
 	}
 	splitAfter := strings.SplitAfter(string(procStatFileBytes), ")")
 
-	if len(splitAfter) == 0 || len(splitAfter) == 1 {
-		return sysInfo, errors.New("Can't find process with this PID: " + strconv.Itoa(pid))
+	if len(splitAfter) <= 1 {
+		return nil, errors.New("Can't find process with this PID: " + strconv.Itoa(pid))
 	}
 	infos := strings.Split(splitAfter[1], " ")
 	st := &Stat{
 		utime:  parseFloat(infos[12]),
 		stime:  parseFloat(infos[13]),
-		cutime: parseFloat(infos[14]),
-		cstime: parseFloat(infos[15]),
 		start:  parseFloat(infos[20]) / clkTck,
 		rss:    parseFloat(infos[22]),
 		uptime: uptime,
@@ -159,27 +155,26 @@ func statFromProc(pid int) (*Info, error) {
 	if _history.stime != 0 {
 		_stime = _history.stime
 	}
-
 	if _history.utime != 0 {
 		_utime = _history.utime
 	}
 	total := st.stime - _stime + st.utime - _utime
-	total = total / clkTck
+	total /= clkTck
 
 	seconds := st.start - uptime
 	if _history.uptime != 0 {
 		seconds = uptime - _history.uptime
 	}
-
-	seconds = math.Abs(seconds)
-	if seconds == 0 {
+	if seconds = math.Abs(seconds); seconds == 0 {
 		seconds = 1
 	}
 
 	history[pid] = *st
-	sysInfo.Pcpu = (total / seconds) * 100
-	sysInfo.Rss = st.rss * pageSize
-	return sysInfo, nil
+
+	return &Info{
+		Pcpu: (total / seconds) * 100,
+		Rss:  st.rss * pageSize,
+	}, nil
 }
 
 func stat(pid int, statType string) (*Info, error) {
