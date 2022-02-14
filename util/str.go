@@ -35,7 +35,16 @@ func ParseStringToMap(s, kkSep, kvSep string) map[string]string {
 	m := make(map[string]string)
 	for _, e := range entries {
 		parts := strings.Split(e, kvSep)
-		m[parts[0]] = parts[1]
+		if parts[0] == "" {
+			continue
+		}
+
+		if len(parts) > 1 {
+			m[parts[0]] = parts[1]
+		} else {
+			m[parts[0]] = ""
+		}
+
 	}
 
 	return m

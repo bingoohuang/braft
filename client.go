@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/bingoohuang/gg/pkg/ss"
+
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/bingoohuang/braft/discovery"
@@ -53,30 +55,68 @@ func GetPeerDetails(addr string) (*proto.GetDetailsResponse, error) {
 	return response, nil
 }
 
-var (
+// CreateDiscovery creates a new discovery from the given discovery method.
+func CreateDiscovery(discoveryMethod string) discovery.Discovery {
+	switch s := discoveryMethod; {
+	case s == "k8s" || strings.HasPrefix(s, "k8s:"):
+		if strings.HasPrefix(s, "k8s:") {
+			s = strings.TrimPrefix(s, "k8s:")
+		}
+		m := util.ParseStringToMap(s, ",", "=")
+		findAndDelete := func(key string) string {
+			for k, v := range m {
+				if strings.EqualFold(key, k) {
+					delete(m, k)
+					return v
+				}
+			}
 
-	// EnvDiscovery is the discovery method for the raft cluster.
+			return ""
+		}
+
+		namespace := ss.Or(findAndDelete("namespace"), DefaultDiscovery)
+		portname := ss.Or(findAndDelete("portname"), DefaultK8sPortName)
+		if len(m) <= 0 {
+			m = DefaultK8sServiceLabels
+		}
+
+		return discovery.NewKubernetesDiscovery(namespace, portname, m)
+	case s == "mdns" || s == "" || strings.HasPrefix(s, "mdns:"):
+		serverName := ""
+		if strings.HasPrefix(s, "mdns:") {
+			serverName = strings.TrimPrefix(s, "mdns:")
+		}
+		serverName = ss.Or(serverName, DefaultMdnsService)
+		return discovery.NewMdnsDiscovery(serverName)
+	default:
+		s = strings.TrimPrefix(s, "static:")
+		peers := ss.Split(s, ss.WithSeps(","), ss.WithIgnoreEmpty(true), ss.WithTrimSpace(true))
+		if len(peers) <= 0 {
+			peers = DefaultStaticPeers
+		}
+
+		return discovery.NewStaticDiscovery(peers)
+	}
+}
+
+var (
+	// DefaultMdnsService is the default mDNS service.
+	DefaultMdnsService = "_braft._tcp,_windows"
+	// DefaultK8sNamespace is the default namespace for k8s.
+	DefaultK8sNamespace = util.Env("K8S_NAMESPACE", "K8N")
+	// DefaultK8sPortName is the default port name for k8s.
+	DefaultK8sPortName = util.Env("K8S_PORTNAME", "K8P")
+	// DefaultK8sServiceLabels is the default labels for k8s.
+	// e.g. svc=braft,type=demo
+	DefaultK8sServiceLabels = util.ParseStringToMap(util.Env("K8S_LABELS", "K8L"), ",", "=")
+	// DefaultStaticPeers is the default static peers of static raft cluster nodes.
+	DefaultStaticPeers []string
+	// DefaultDiscovery is the default discovery method for the raft cluster member discovery.
 	// e.g.
 	// static:192.168.1.1,192.168.1.2,192.168.1.3
 	// k8s:svcType=braft;svcBiz=rig
 	// mdns:_braft._tcp
-	EnvDiscovery = func() discovery.Discovery {
-		s := strings.ToLower(util.Env("BRAFT_DISCOVERY", "BDI"))
-		switch {
-		case s == "k8s":
-			return discovery.NewKubernetesDiscovery()
-		case s == "mdns" || s == "" || strings.HasPrefix(s, "mdns:"):
-			if strings.HasPrefix(s, "mdns:") {
-				s = strings.TrimPrefix(s, "mdns:")
-			} else {
-				s = ""
-			}
-			return discovery.NewMdnsDiscovery(s)
-		default:
-			s = strings.TrimPrefix(s, "static:")
-			return discovery.NewStaticDiscovery(strings.Split(s, ","))
-		}
-	}()
+	DefaultDiscovery = strings.ToLower(util.Env("BRAFT_DISCOVERY", "BDI"))
 
 	// EnvIP specifies the current host IP.
 	// Priority

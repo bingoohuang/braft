@@ -95,9 +95,8 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	if nodeConfig.TypeRegister == nil {
 		nodeConfig.TypeRegister = marshal.NewTypeRegister(marshal.NewMsgPackSerializer())
 	}
-
 	if nodeConfig.Discovery == nil {
-		nodeConfig.Discovery = EnvDiscovery
+		nodeConfig.Discovery = CreateDiscovery(DefaultDiscovery)
 	}
 	if len(nodeConfig.Services) == 0 {
 		nodeConfig.Services = []fsm.Service{fsm.NewMemKvService()}
@@ -202,7 +201,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
 func (n *Node) Start() error {
 	n.StartTime = time.Now()
-	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, EnvDiscovery.Name())
+	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, n.DiscoveryName())
 
 	// 防止各个节点同时启动太快，随机休眠
 	util.Think(ss.Or(util.Env("BRAFT_SLEEP", "BSL"), "100ms-3s"))
@@ -263,9 +262,7 @@ func (n *Node) Start() error {
 }
 
 // DiscoveryName returns the name of discovery.
-func (n *Node) DiscoveryName() string {
-	return n.Conf.Discovery.Name()
-}
+func (n *Node) DiscoveryName() string { return n.Conf.Discovery.Name() }
 
 // Stop stops the node and notifies on stopped channel returned in Start.
 func (n *Node) Stop() {

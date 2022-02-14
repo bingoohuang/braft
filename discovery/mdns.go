@@ -23,10 +23,10 @@ type mdnsDiscovery struct {
 
 func NewMdnsDiscovery(serviceName string) Discovery {
 	return &mdnsDiscovery{
-		nodeID:        "",
-		serviceName:   ss.Or(serviceName, "_braft._tcp"),
-		nodePort:      0,
-		mdnsServer:    &zeroconf.Server{},
+		// https://github.com/grandcat/zeroconf
+		// Multiple subtypes may be added to service name, separated by commas.
+		// e.g _workstation._tcp,_windows has subtype _windows.
+		serviceName:   serviceName,
 		discoveryChan: make(chan string),
 		tempQueue:     util.NewUniqueQueue(100),
 	}

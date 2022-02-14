@@ -25,11 +25,11 @@ type kubernetesDiscovery struct {
 	clientSet *kubernetes.Clientset
 }
 
-func NewKubernetesDiscovery() Discovery {
+func NewKubernetesDiscovery(namespace, portName string, serviceLabels map[string]string) Discovery {
 	return &kubernetesDiscovery{
-		namespace:     util.Env("K8S_NAMESPACE", "K8N"),
-		serviceLabels: util.ParseStringToMap(util.Env("K8S_LABELS", "K8L"), ",", "="),
-		portName:      util.Env("K8S_PORTNAME", "K8P"),
+		namespace:     namespace,
+		serviceLabels: serviceLabels,
+		portName:      portName,
 		discoveryChan: make(chan string),
 		stopChan:      make(chan bool),
 	}
