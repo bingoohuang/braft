@@ -91,8 +91,8 @@ github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
-github.com/bingoohuang/gg v0.0.0-20220214050243-f2c49c66c250 h1:iWW9G78Z0n3kmhAlPTZ5vUmmlWxvgm0ETMlSBo+qREo=
-github.com/bingoohuang/gg v0.0.0-20220214050243-f2c49c66c250/go.mod h1:IU0arWvF/TX8DAmFjhlYtEXDlgBh2FsvyPMq34E0wB4=
+github.com/bingoohuang/gg v0.0.0-20220214053025-c58ecb54fac1 h1:foZBVyVn3U8Xa8Sx8oVEXkcB7VyXtbvCm0IaUbvLkUs=
+github.com/bingoohuang/gg v0.0.0-20220214053025-c58ecb54fac1/go.mod h1:IU0arWvF/TX8DAmFjhlYtEXDlgBh2FsvyPMq34E0wB4=
 github.com/bingoohuang/golog v0.0.0-20211112131923-101b7e1b3d4c/go.mod h1:atiVUeYe0Rsi80P0eDEF8lpf9qvt/w/qpil8PpNGYvw=
 github.com/bingoohuang/golog v0.0.0-20220127093001-382e047c483b h1:IWV2mKHCOgE4Msa2IpjCRk3tu7lG682wx8pM1MAnq60=
 github.com/bingoohuang/golog v0.0.0-20220127093001-382e047c483b/go.mod h1:qg423THrCJp6chlMyzCO3ThnzV+q5jIglxApmruij5g=
