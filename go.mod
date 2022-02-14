@@ -32,7 +32,7 @@ require (
 
 require (
 	github.com/armon/go-metrics v0.3.9 // indirect
-	github.com/bingoohuang/gg v0.0.0-20220209055840-167a27fbe976
+	github.com/bingoohuang/gg v0.0.0-20220214050243-f2c49c66c250
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

@@ -62,7 +62,7 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 		if strings.HasPrefix(s, "k8s:") {
 			s = strings.TrimPrefix(s, "k8s:")
 		}
-		m := util.ParseStringToMap(s, ",", "=")
+		m := ss.SplitToMap(s, "=", ",")
 		findAndDelete := func(key string) string {
 			for k, v := range m {
 				if strings.EqualFold(key, k) {
@@ -74,13 +74,10 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 			return ""
 		}
 
-		namespace := ss.Or(findAndDelete("namespace"), DefaultDiscovery)
+		namespace := ss.Or(findAndDelete("namespace"), DefaultK8sNamespace)
 		portname := ss.Or(findAndDelete("portname"), DefaultK8sPortName)
-		if len(m) <= 0 {
-			m = DefaultK8sServiceLabels
-		}
-
-		return discovery.NewKubernetesDiscovery(namespace, portname, m)
+		serviceLabels := util.OrSlice(m, DefaultK8sServiceLabels)
+		return discovery.NewKubernetesDiscovery(namespace, portname, serviceLabels)
 	case s == "mdns" || s == "" || strings.HasPrefix(s, "mdns:"):
 		serverName := ""
 		if strings.HasPrefix(s, "mdns:") {
@@ -108,7 +105,7 @@ var (
 	DefaultK8sPortName = util.Env("K8S_PORTNAME", "K8P")
 	// DefaultK8sServiceLabels is the default labels for k8s.
 	// e.g. svc=braft,type=demo
-	DefaultK8sServiceLabels = util.ParseStringToMap(util.Env("K8S_LABELS", "K8L"), ",", "=")
+	DefaultK8sServiceLabels = ss.SplitToMap(util.Env("K8S_LABELS", "K8L"), "=", ",")
 	// DefaultStaticPeers is the default static peers of static raft cluster nodes.
 	DefaultStaticPeers []string
 	// DefaultDiscovery is the default discovery method for the raft cluster member discovery.

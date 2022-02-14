@@ -3,6 +3,7 @@ package braft
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/ss"
 	"log"
 	"net/http"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/bingoohuang/gg/pkg/fn"
 
 	"github.com/bingoohuang/braft/fsm"
-	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/v"
 	"github.com/bingoohuang/golog/pkg/ginlogrus"
 	"github.com/gin-gonic/gin"
@@ -155,8 +155,8 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 // ServeKV services the kv set/get http api.
 func (n *Node) ServeKV(ctx *gin.Context) {
 	req := fsm.KvRequest{
-		MapName: util.Or(getQuery(ctx, "map", "m"), "default"),
-		Key:     util.Or(getQuery(ctx, "key", "k"), "default"),
+		MapName: ss.Or(getQuery(ctx, "map", "m"), "default"),
+		Key:     ss.Or(getQuery(ctx, "key", "k"), "default"),
 	}
 	ctx.Header("Braft-IP", strings.Join(n.RaftID.IP, ","))
 	ctx.Header("Braft-ID", n.RaftID.ID)

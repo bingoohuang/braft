@@ -38,7 +38,7 @@ func NewKubernetesDiscovery(namespace, portName string, serviceLabels map[string
 // Name gives the name of the discovery.
 func (k *kubernetesDiscovery) Name() string {
 	return "k8s://ns=" + k.namespace +
-		"/labels=" + util.MapToString(k.serviceLabels, ",", "=") +
+		"/labels=" + ss.JoinMap(k.serviceLabels, "=", ",") +
 		"/portName=" + k.portName
 }
 
