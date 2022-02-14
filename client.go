@@ -59,9 +59,8 @@ func GetPeerDetails(addr string) (*proto.GetDetailsResponse, error) {
 func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 	switch s := discoveryMethod; {
 	case s == "k8s" || strings.HasPrefix(s, "k8s:"):
-		if strings.HasPrefix(s, "k8s:") {
-			s = strings.TrimPrefix(s, "k8s:")
-		}
+		s := ss.If(s == "k8s", "", s)
+		s = strings.TrimPrefix(s, "k8s:")
 		m := ss.SplitToMap(s, "=", ",")
 		findAndDelete := func(key string) string {
 			for k, v := range m {
@@ -70,7 +69,6 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 					return v
 				}
 			}
-
 			return ""
 		}
 
@@ -79,11 +77,9 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 		serviceLabels := util.OrSlice(m, DefaultK8sServiceLabels)
 		return discovery.NewKubernetesDiscovery(namespace, portname, serviceLabels)
 	case s == "mdns" || s == "" || strings.HasPrefix(s, "mdns:"):
-		serverName := ""
-		if strings.HasPrefix(s, "mdns:") {
-			serverName = strings.TrimPrefix(s, "mdns:")
-		}
-		serverName = ss.Or(serverName, DefaultMdnsService)
+		s := ss.If(s == "mdns", "", s)
+		s = strings.TrimPrefix(s, "mdns:")
+		serverName := ss.Or(s, DefaultMdnsService)
 		return discovery.NewMdnsDiscovery(serverName)
 	default:
 		s = strings.TrimPrefix(s, "static:")
