@@ -8,19 +8,113 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/bingoohuang/braft/marshal"
+	"github.com/bingoohuang/gg/pkg/flagparse"
+	"github.com/bingoohuang/golog"
+
 	"github.com/bingoohuang/gg/pkg/sigx"
 
 	"github.com/bingoohuang/braft"
 	"github.com/bingoohuang/braft/fsm"
 	"github.com/bingoohuang/gg/pkg/codec"
-	"github.com/bingoohuang/gg/pkg/flagparse"
 	"github.com/bingoohuang/gg/pkg/randx"
 	"github.com/bingoohuang/gg/pkg/v"
-	"github.com/bingoohuang/golog"
 	"github.com/gin-gonic/gin"
 	"github.com/segmentio/ksuid"
 	"github.com/thoas/go-funk"
 )
+
+func main() {
+	dh := &DemoPicker{}
+	braft.DefaultMdnsService = "_braft._tcp,_demo"
+	node, err := braft.NewNode(
+		braft.WithServices(fsm.NewMemKvService(), fsm.NewDistributeService(dh)),
+	)
+	if err != nil {
+		log.Fatalf("failed to new node, error: %v", err)
+	}
+	if err := node.Start(); err != nil {
+		log.Fatalf("failed to start node, error: %v", err)
+	}
+
+	node.RunHTTP(
+		braft.WithHandler(http.MethodPost, "/distribute", dh.distributePost),
+		braft.WithHandler(http.MethodGet, "/distribute", dh.distributeGet),
+	)
+}
+
+type DemoItem struct {
+	ID     string
+	NodeID string
+}
+
+var _ fsm.DistributableItem = (*DemoItem)(nil)
+
+func (d *DemoItem) GetItemID() string       { return d.ID }
+func (d *DemoItem) SetNodeID(nodeID string) { d.NodeID = nodeID }
+
+type DemoDist struct {
+	Items  []DemoItem
+	Common string
+}
+
+func (d *DemoDist) GetDistributableItems() interface{} { return d.Items }
+
+type DemoPicker struct{ DD *DemoDist }
+
+func (d *DemoPicker) PickForNode(nodeID string, request interface{}) {
+	dd := request.(*DemoDist)
+	dd.Items = funk.Filter(dd.Items, func(item DemoItem) bool {
+		return item.NodeID == nodeID
+	}).([]DemoItem)
+	d.DD = dd
+	log.Printf("got %d items: %s", len(dd.Items), codec.Json(dd))
+}
+
+func (d *DemoPicker) RegisterMarshalTypes(reg *marshal.TypeRegister) {
+	reg.RegisterType(reflect.TypeOf(DemoDist{}))
+}
+
+func (d *DemoPicker) distributeGet(ctx *gin.Context, _ *braft.Node) {
+	ctx.JSON(http.StatusOK, d.DD)
+}
+
+func (d *DemoPicker) distributePost(ctx *gin.Context, n *braft.Node) {
+	dd := &DemoDist{Items: makeRandItems(ctx.Query("n")), Common: ksuid.New().String()}
+	if result, err := n.Distribute(dd); err != nil {
+		ctx.JSON(http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.JSON(http.StatusOK, result)
+	}
+}
+
+func makeRandItems(q string) (ret []DemoItem) {
+	n, _ := strconv.Atoi(q)
+	if n <= 0 {
+		n = randx.IntN(20)
+	}
+
+	for i := 0; i < n; i++ {
+		ret = append(ret, DemoItem{ID: fmt.Sprintf("%d", i)})
+	}
+
+	return
+}
+
+func init() {
+	flagparse.Parse(&arg)
+
+	golog.Setup()
+
+	// 注册性能采集信号，用法:
+	// 第一步，通知开始采集：touch jj.cpu; kill -USR1 `pidof dsvs2`;
+	// 第二部，压力测试开始（或者其他手工测试，等待程序运行一段时间，比如5分钟）
+	// 第三步，通知结束采集，生成 cpu.profile 文件，命令与第一步相同
+	// 第四步，下载 cpu.profile 文件，`go tool pprof -http :9402 cpu.profile` 开启浏览器查看
+	sigx.RegisterSignalProfile()
+}
+
+var arg Arg
 
 type Arg struct {
 	Version bool `flag:",v"`
@@ -37,95 +131,3 @@ Usage of %s:
 
 // VersionInfo is optional for customized version.
 func (a Arg) VersionInfo() string { return v.Version() }
-
-func main() {
-	c := &Arg{}
-	flagparse.Parse(c)
-
-	golog.Setup()
-
-	dh := &DemoHandler{}
-	node, err := braft.NewNode(braft.WithServices(fsm.NewMemKvService(), fsm.NewDistributeService(dh)))
-	if err != nil {
-		log.Fatalf("failed to new node, error: %v", err)
-	}
-	node.Conf.TypeRegister.RegisterType(reflect.TypeOf(DemoDistribution{}))
-	if err := node.Start(); err != nil {
-		log.Fatalf("failed to start node, error: %v", err)
-	}
-
-	go func() {
-		for becameLeader := range node.Raft.LeaderCh() {
-			log.Printf("becameLeader: %v", becameLeader)
-		}
-	}()
-	node.RunHTTP(
-		braft.WithHandler(http.MethodPost, "/distribute", dh.distributePost),
-		braft.WithHandler(http.MethodGet, "/distribute", dh.distributeGet),
-	)
-}
-
-type DemoDistributionItem struct {
-	ID     string
-	NodeID string
-}
-
-var _ fsm.DistributableItem = (*DemoDistributionItem)(nil)
-
-func (d *DemoDistributionItem) GetItemID() string       { return d.ID }
-func (d *DemoDistributionItem) SetNodeID(nodeID string) { d.NodeID = nodeID }
-
-type DemoDistribution struct {
-	Items  []DemoDistributionItem
-	Common string
-}
-
-func (d *DemoDistribution) GetDistributableItems() interface{} { return d.Items }
-
-type DemoHandler struct {
-	DD *DemoDistribution
-}
-
-func (d *DemoHandler) PickForNode(nodeID string, request interface{}) {
-	dd := request.(*DemoDistribution)
-	dd.Items = funk.Filter(dd.Items, func(item DemoDistributionItem) bool {
-		return item.NodeID == nodeID
-	}).([]DemoDistributionItem)
-	d.DD = dd
-	log.Printf("got %d items: %s", len(dd.Items), codec.Json(dd))
-}
-
-func (d *DemoHandler) distributeGet(ctx *gin.Context, _ *braft.Node) {
-	ctx.JSON(http.StatusOK, d.DD)
-}
-
-func (d *DemoHandler) distributePost(ctx *gin.Context, n *braft.Node) {
-	dd := &DemoDistribution{Items: makeRandItems(ctx.Query("n")), Common: ksuid.New().String()}
-	if result, err := n.Distribute(dd); err != nil {
-		ctx.JSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.JSON(http.StatusOK, result)
-	}
-}
-
-func makeRandItems(q string) (ret []DemoDistributionItem) {
-	n, _ := strconv.Atoi(q)
-	if n <= 0 {
-		n = randx.IntN(20)
-	}
-
-	for i := 0; i < n; i++ {
-		ret = append(ret, DemoDistributionItem{ID: fmt.Sprintf("%d", i)})
-	}
-
-	return
-}
-
-func init() {
-	// 注册性能采集信号，用法:
-	// 第一步，通知开始采集：touch jj.cpu; kill -USR1 `pidof dsvs2`;
-	// 第二部，压力测试开始（或者其他手工测试，等待程序运行一段时间，比如5分钟）
-	// 第三步，通知结束采集，生成 cpu.profile 文件，命令与第一步相同
-	// 第四步，下载 cpu.profile 文件，`go tool pprof -http :9402 cpu.profile` 开启浏览器查看
-	sigx.RegisterSignalProfile()
-}

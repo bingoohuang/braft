@@ -59,10 +59,16 @@ type Config struct {
 	DataDir      string
 	Discovery    discovery.Discovery
 	Services     []fsm.Service
+	LeaderChange func(becameLeader bool)
 }
 
 // ConfigFn is the function option pattern for the NodeConfig.
 type ConfigFn func(*Config)
+
+// WithLeaderChange specifies the leader change callback.
+func WithLeaderChange(s func(becameLeader bool)) ConfigFn {
+	return func(c *Config) { c.LeaderChange = s }
+}
 
 // WithServices specifies the services for the FSM.
 func WithServices(s ...fsm.Service) ConfigFn { return func(c *Config) { c.Services = s } }
@@ -88,39 +94,39 @@ type RaftID struct {
 
 // NewNode returns an BRaft node.
 func NewNode(fns ...ConfigFn) (*Node, error) {
-	nodeConfig := &Config{}
+	conf := &Config{}
 	for _, f := range fns {
-		f(nodeConfig)
+		f(conf)
 	}
-	if nodeConfig.TypeRegister == nil {
-		nodeConfig.TypeRegister = marshal.NewTypeRegister(marshal.NewMsgPackSerializer())
+	if conf.TypeRegister == nil {
+		conf.TypeRegister = marshal.NewTypeRegister(marshal.NewMsgPacker())
 	}
-	if nodeConfig.Discovery == nil {
-		nodeConfig.Discovery = CreateDiscovery(DefaultDiscovery)
+	if conf.Discovery == nil {
+		conf.Discovery = CreateDiscovery(DefaultDiscovery)
 	}
-	if len(nodeConfig.Services) == 0 {
-		nodeConfig.Services = []fsm.Service{fsm.NewMemKvService()}
-	}
-
-	for _, service := range nodeConfig.Services {
-		service.RegisterMarshalTypes(nodeConfig.TypeRegister)
+	if len(conf.Services) == 0 {
+		conf.Services = []fsm.Service{fsm.NewMemKvService()}
 	}
 
-	if nodeConfig.DataDir == "" {
+	for _, service := range conf.Services {
+		service.RegisterMarshalTypes(conf.TypeRegister)
+	}
+
+	if conf.DataDir == "" {
 		dir, err := ioutil.TempDir("", "braft")
 		if err != nil {
 			return nil, err
 		}
-		nodeConfig.DataDir = dir
+		conf.DataDir = dir
 	} else {
 		// stable/log/snapshot store config
-		if !util.IsDir(nodeConfig.DataDir) {
-			if err := util.RemoveCreateDir(nodeConfig.DataDir); err != nil {
+		if !util.IsDir(conf.DataDir) {
+			if err := util.RemoveCreateDir(conf.DataDir); err != nil {
 				return nil, err
 			}
 		}
 	}
-	log.Printf("node data dir: %s", nodeConfig.DataDir)
+	log.Printf("node data dir: %s", conf.DataDir)
 
 	h, _ := os.Hostname()
 	_, ips := goip.MainIP()
@@ -143,7 +149,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	raftConf.LogLevel = hclog.Info.String()
 	raftConf.Logger = &logger{}
 
-	stableStoreFile := filepath.Join(nodeConfig.DataDir, "store.boltdb")
+	stableStoreFile := filepath.Join(conf.DataDir, "store.boltdb")
 	if util.FileExists(stableStoreFile) {
 		if err := os.Remove(stableStoreFile); err != nil {
 			return nil, err
@@ -165,7 +171,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	snapshotStore := raft.NewDiscardSnapshotStore()
 
 	// FSM 有限状态机
-	sm := fsm.NewRoutingFSM(raftID.ID, nodeConfig.Services, nodeConfig.TypeRegister)
+	sm := fsm.NewRoutingFSM(raftID.ID, conf.Services, conf.TypeRegister)
 
 	// memberlist config
 	discoveryConfig := memberlist.DefaultLocalConfig()
@@ -191,7 +197,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 		addr:             fmt.Sprintf(":%d", EnvRport),
 		Raft:             raftServer,
 		TransportManager: t,
-		Conf:             nodeConfig,
+		Conf:             conf,
 		discoveryConfig:  discoveryConfig,
 		distributor:      fsm.NewDistributor(),
 		raftLogSum:       &sm.RaftLogSum,
@@ -255,6 +261,15 @@ func (n *Node) Start() error {
 			log.Fatal(err)
 		}
 	}()
+
+	if n.Conf.LeaderChange != nil {
+		go func() {
+			for becameLeader := range n.Raft.LeaderCh() {
+				log.Printf("becameLeader: %v", becameLeader)
+				n.Conf.LeaderChange(becameLeader)
+			}
+		}()
+	}
 
 	log.Printf("Node started")
 
@@ -399,7 +414,7 @@ func (n *Node) Distribute(bean fsm.Distributable) (interface{}, error) {
 	dataLen := n.distributor.Distribute(n.ShortNodeIds(), items)
 
 	log.Printf("distribute %d items: %s", dataLen, codec.Json(bean))
-	return n.RaftApply(fsm.DistributeRequest{Payload: bean}, time.Second)
+	return n.RaftApply(fsm.DistributeRequest{Data: bean}, time.Second)
 }
 
 // logger adapters logger to LevelLogger.

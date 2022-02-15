@@ -4,14 +4,9 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-func NewMsgPackSerializer() Marshaler { return &MsgPackSerializer{} }
+func NewMsgPacker() Marshaler { return &MsgPacker{} }
 
-type MsgPackSerializer struct{}
+type MsgPacker struct{}
 
-func (s *MsgPackSerializer) Marshal(data interface{}) ([]byte, error) {
-	return msgpack.Marshal(data)
-}
-
-func (s *MsgPackSerializer) Unmarshal(data []byte, v interface{}) error {
-	return msgpack.Unmarshal(data, v)
-}
+func (s *MsgPacker) Marshal(d interface{}) ([]byte, error)   { return msgpack.Marshal(d) }
+func (s *MsgPacker) Unmarshal(d []byte, v interface{}) error { return msgpack.Unmarshal(d, v) }

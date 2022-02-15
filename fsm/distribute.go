@@ -131,18 +131,19 @@ func (d *Distributor) cleanKeysNotIn(nodeIds []string) {
 }
 
 type DistributeService struct {
-	picker Picker
+	Picker
 }
 
 var _ Service = (*DistributeService)(nil)
 
 func NewDistributeService(picker Picker) *DistributeService {
-	return &DistributeService{picker: picker}
+	return &DistributeService{Picker: picker}
 }
 
 // RegisterMarshalTypes registers the types for marshaling and unmarshaling.
-func (m *DistributeService) RegisterMarshalTypes(typeRegister *marshal.TypeRegister) {
-	typeRegister.RegisterType(reflect.TypeOf(DistributeRequest{}))
+func (m *DistributeService) RegisterMarshalTypes(reg *marshal.TypeRegister) {
+	reg.RegisterType(reflect.TypeOf(DistributeRequest{}))
+	m.Picker.RegisterMarshalTypes(reg)
 }
 
 func (m *DistributeService) ApplySnapshot(nodeID string, input interface{}) error {
@@ -154,7 +155,7 @@ func (m *DistributeService) NewLog(nodeID string, request interface{}) interface
 	log.Printf("DistributeService NewLog req: %+v", request)
 
 	req := request.(DistributeRequest)
-	m.picker.PickForNode(nodeID, req.Payload)
+	m.PickForNode(nodeID, req.Data)
 
 	return nil
 }
@@ -162,25 +163,20 @@ func (m *DistributeService) NewLog(nodeID string, request interface{}) interface
 func (m *DistributeService) GetReqDataType() interface{} { return DistributeRequest{} }
 
 type DistributeRequest struct {
-	Payload interface{}
+	Data interface{}
 }
 
-var (
-	_ marshal.TypeRegisterMarshaler   = (*DistributeRequest)(nil)
-	_ marshal.TypeRegisterUnmarshaler = (*DistributeRequest)(nil)
-)
+var _ marshal.TypeRegisterMarshalerAdapter = (*DistributeRequest)(nil)
 
-func (s DistributeRequest) MarshalMsgpack(t *marshal.TypeRegister) ([]byte, error) {
-	return t.Marshal(s.Payload)
-}
-
-func (s *DistributeRequest) UnmarshalMsgpack(t *marshal.TypeRegister, d []byte) (err error) {
-	s.Payload, err = t.Unmarshal(d)
+func (s DistributeRequest) Marshal(t *marshal.TypeRegister) ([]byte, error) { return t.Marshal(s.Data) }
+func (s *DistributeRequest) Unmarshal(t *marshal.TypeRegister, d []byte) (err error) {
+	s.Data, err = t.Unmarshal(d)
 	return
 }
 
 type Picker interface {
 	PickForNode(node string, request interface{})
+	MarshalTypesRegister
 }
 
 type PickerFn func(node string, request interface{})

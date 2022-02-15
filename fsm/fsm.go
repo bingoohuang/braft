@@ -14,6 +14,10 @@ type Service interface {
 	// ApplySnapshot is used to decode and apply a snapshot to the FSMService
 	ApplySnapshot(shortNodeID string, input interface{}) error
 
+	MarshalTypesRegister
+}
+
+type MarshalTypesRegister interface {
 	// RegisterMarshalTypes registers the types for marshaling and unmarshaling.
-	RegisterMarshalTypes(typeRegister *marshal.TypeRegister)
+	RegisterMarshalTypes(reg *marshal.TypeRegister)
 }

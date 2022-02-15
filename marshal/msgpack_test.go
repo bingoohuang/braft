@@ -13,7 +13,7 @@ func TestMsgPack(t *testing.T) {
 	}
 	ms := MyStruct{Name: "bingoohuang"}
 
-	tr := marshal.NewTypeRegister(marshal.NewMsgPackSerializer())
+	tr := marshal.NewTypeRegister(marshal.NewMsgPacker())
 	data, err := tr.Marshal(ms)
 	assert.Nil(t, err)
 
@@ -21,5 +21,6 @@ func TestMsgPack(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, ms, m1)
 
-	tr.Marshal(nil)
+	_, err = tr.Marshal(nil)
+	assert.Nil(t, err)
 }

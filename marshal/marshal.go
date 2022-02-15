@@ -4,7 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sync"
+
+	"github.com/bingoohuang/gg/pkg/handy"
 )
 
 // Marshaler interface is to provide serialize and deserialize methods for BRaft Node
@@ -23,21 +24,17 @@ type Data struct {
 }
 
 type TypeRegister struct {
-	sync.Mutex
+	lock    handy.Lock
 	TypeMap map[string]reflect.Type
 	Marshaler
 }
 
-func NewTypeRegister(ser Marshaler) *TypeRegister {
-	return &TypeRegister{
-		TypeMap:   map[string]reflect.Type{},
-		Marshaler: ser,
-	}
+func NewTypeRegister(m Marshaler) *TypeRegister {
+	return &TypeRegister{TypeMap: map[string]reflect.Type{}, Marshaler: m}
 }
 
 func (t *TypeRegister) newType(typ string) (ptr reflect.Value, ok bool) {
-	t.Lock()
-	defer t.Unlock()
+	defer t.lock.LockDeferUnlock()()
 
 	if rt, ok := t.TypeMap[typ]; !ok {
 		return reflect.Value{}, false
@@ -54,11 +51,9 @@ func (t *TypeRegister) RegisterType(typ reflect.Type) (typName string, isPtr boo
 	if isPtr = typ.Kind() == reflect.Ptr; isPtr {
 		typ = typ.Elem()
 	}
-
 	typName = typ.String()
 
-	t.Lock()
-	defer t.Unlock()
+	defer t.lock.LockDeferUnlock()()
 
 	if _, ok := t.TypeMap[typName]; !ok {
 		t.TypeMap[typName] = typ
@@ -84,13 +79,13 @@ func (t *TypeRegister) Unmarshal(data []byte) (interface{}, error) {
 	}
 	pi := ptr.Interface()
 
-	var err error
-	if customMarshal, ok := pi.(TypeRegisterUnmarshaler); ok {
-		err = customMarshal.UnmarshalMsgpack(t, wrap.Payload)
-	} else {
-		err = t.Marshaler.Unmarshal(wrap.Payload, pi)
-	}
-	if err != nil {
+	if err := func() error {
+		if adapter, ok := pi.(TypeRegisterUnmarshalerAdapter); ok {
+			return adapter.Unmarshal(t, wrap.Payload)
+		}
+
+		return t.Marshaler.Unmarshal(wrap.Payload, pi)
+	}(); err != nil {
 		return nil, err
 	}
 
@@ -101,26 +96,22 @@ func (t *TypeRegister) Unmarshal(data []byte) (interface{}, error) {
 	return ptr.Elem().Interface(), nil
 }
 
-type TypeRegisterMarshaler interface {
-	MarshalMsgpack(*TypeRegister) ([]byte, error)
+type TypeRegisterMarshalerAdapter interface {
+	Marshal(*TypeRegister) ([]byte, error)
 }
 
-type TypeRegisterUnmarshaler interface {
-	UnmarshalMsgpack(*TypeRegister, []byte) error
+type TypeRegisterUnmarshalerAdapter interface {
+	Unmarshal(*TypeRegister, []byte) error
 }
 
 func (t *TypeRegister) Marshal(data interface{}) ([]byte, error) {
-	var (
-		payload []byte
-		err     error
-	)
+	payload, err := func() ([]byte, error) {
+		if adapter, ok := data.(TypeRegisterMarshalerAdapter); ok {
+			return adapter.Marshal(t)
+		}
 
-	if customMarshal, ok := data.(TypeRegisterMarshaler); ok {
-		payload, err = customMarshal.MarshalMsgpack(t)
-	} else {
-		payload, err = t.Marshaler.Marshal(data)
-	}
-
+		return t.Marshaler.Marshal(data)
+	}()
 	if err != nil {
 		return nil, err
 	}
