@@ -1,6 +1,7 @@
 package braft
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -107,6 +108,8 @@ type RaftNode struct {
 	GoVersion  string
 	AppVersion string
 	Pcpu       float32
+
+	BizData json.RawMessage
 }
 
 // ServeRaft services the raft http api.
@@ -136,6 +139,8 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 				BuildTime:  v.BuildTime,
 				GoVersion:  v.GoVersion,
 				AppVersion: v.AppVersion,
+
+				BizData: json.RawMessage(rsp.BizData),
 			})
 		}
 	}

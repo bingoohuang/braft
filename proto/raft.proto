@@ -25,6 +25,7 @@ message GetDetailsResponse {
   uint64 raftLogSum = 12;
   uint64 pid = 13;
   float pcpu = 14;
+  string bizData = 15;
 }
 
 message ApplyRequest {

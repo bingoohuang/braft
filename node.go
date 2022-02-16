@@ -60,6 +60,7 @@ type Config struct {
 	Discovery    discovery.Discovery
 	Services     []fsm.Service
 	LeaderChange func(becameLeader bool)
+	BizData      func() interface{}
 }
 
 // ConfigFn is the function option pattern for the NodeConfig.
@@ -69,6 +70,9 @@ type ConfigFn func(*Config)
 func WithLeaderChange(s func(becameLeader bool)) ConfigFn {
 	return func(c *Config) { c.LeaderChange = s }
 }
+
+// WithBizData specifies the biz data of current node for the node for /raft api .
+func WithBizData(s func() interface{}) ConfigFn { return func(c *Config) { c.BizData = s } }
 
 // WithServices specifies the services for the FSM.
 func WithServices(s ...fsm.Service) ConfigFn { return func(c *Config) { c.Services = s } }

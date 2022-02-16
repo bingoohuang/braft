@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/jsoni"
+
 	"github.com/bingoohuang/braft/pidusage"
 
 	"github.com/bingoohuang/braft/discovery"
@@ -89,5 +91,15 @@ func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsReques
 		}(),
 		RaftLogSum: atomic.LoadUint64(s.Node.raftLogSum),
 		Pid:        uint64(os.Getpid()),
+		BizData:    createBizData(s.Node.Conf.BizData),
 	}, nil
+}
+
+func createBizData(f func() interface{}) string {
+	if f == nil {
+		return ""
+	}
+
+	s, _ := jsoni.MarshalToString(f())
+	return s
 }
