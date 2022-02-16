@@ -85,8 +85,6 @@ func (k *mdnsDiscovery) receive(entries chan *zeroconf.ServiceEntry) {
 	}
 }
 
-func (k *mdnsDiscovery) IsStatic() bool { return false }
-
 func (k *mdnsDiscovery) Stop() {
 	k.cancel()
 	k.mdnsServer.Shutdown()

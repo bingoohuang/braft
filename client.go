@@ -3,7 +3,11 @@ package braft
 import (
 	"context"
 	"errors"
+	"log"
 	"strings"
+	"time"
+
+	"go.uber.org/multierr"
 
 	"github.com/bingoohuang/gg/pkg/ss"
 
@@ -17,20 +21,19 @@ import (
 )
 
 // ApplyOnLeader apply a payload on the leader node.
-func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
+func (n *Node) ApplyOnLeader(payload []byte, timeout time.Duration) (interface{}, error) {
 	addr := string(n.Raft.Leader())
 	if addr == "" {
 		return nil, errors.New("unknown leader")
 	}
 
-	addr = strings.Replace(addr, "0.0.0.0", "127.0.0.1", 1)
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.EmptyDialOption{})
+	ctx, deferFn, c, err := GetRaftClient(addr, timeout)
+	defer deferFn()
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
-	response, err := proto.NewRaftClient(conn).ApplyLog(context.Background(), &proto.ApplyRequest{Request: payload})
+	response, err := c.ApplyLog(ctx, &proto.ApplyRequest{Request: payload})
 	if err != nil {
 		return nil, err
 	}
@@ -39,20 +42,44 @@ func (n *Node) ApplyOnLeader(payload []byte) (interface{}, error) {
 }
 
 // GetPeerDetails returns the remote peer details.
-func GetPeerDetails(addr string) (*proto.GetDetailsResponse, error) {
+func GetPeerDetails(addr string, timeout time.Duration) (*proto.GetDetailsResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ctx, deferFn, c, err := GetRaftClient(addr, timeout)
+	defer deferFn()
+	if err != nil {
+		return nil, err
+	}
+
+	return c.GetDetails(ctx, &proto.GetDetailsRequest{})
+}
+
+// GetRaftClient returns the raft client with timeout context.
+func GetRaftClient(addr string, timeout time.Duration) (ctx context.Context, deferFn func(), client proto.RaftClient, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	deferFns := []func() error{func() error { cancel(); return nil }}
+
 	addr = strings.Replace(addr, "0.0.0.0", "127.0.0.1", 1)
-	c, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.EmptyDialOption{})
+	c, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.EmptyDialOption{})
 	if err != nil {
-		return nil, err
+		return ctx, wrapDefers(deferFns), nil, err
 	}
-	defer c.Close()
+	deferFns = append(deferFns, c.Close)
 
-	response, err := proto.NewRaftClient(c).GetDetails(context.Background(), &proto.GetDetailsRequest{})
-	if err != nil {
-		return nil, err
+	return ctx, wrapDefers(deferFns), proto.NewRaftClient(c), nil
+}
+
+func wrapDefers(fns []func() error) func() {
+	return func() {
+		var err error
+		for _, fn := range fns {
+			err = multierr.Append(err, fn())
+		}
+		if err != nil {
+			log.Printf("E! error occured: %v", err)
+		}
 	}
-
-	return response, nil
 }
 
 // CreateDiscovery creates a new discovery from the given discovery method.
@@ -94,7 +121,7 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 
 var (
 	// DefaultMdnsService is the default mDNS service.
-	DefaultMdnsService = "_braft._tcp,_windows"
+	DefaultMdnsService = ss.Or(util.Env("MDNS_SERVICE", "MDS"), "_braft._tcp,_windows")
 	// DefaultK8sNamespace is the default namespace for k8s.
 	DefaultK8sNamespace = util.Env("K8S_NAMESPACE", "K8N")
 	// DefaultK8sPortName is the default port name for k8s.

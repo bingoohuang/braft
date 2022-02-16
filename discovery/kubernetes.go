@@ -139,5 +139,4 @@ func (k *kubernetesDiscovery) findPort(pod core.Pod) (p core.ContainerPort) {
 	return p
 }
 
-func (k *kubernetesDiscovery) IsStatic() bool { return false }
-func (k *kubernetesDiscovery) Stop()          { k.stopChan <- true }
+func (k *kubernetesDiscovery) Stop() { k.stopChan <- true }

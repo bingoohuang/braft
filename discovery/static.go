@@ -23,8 +23,6 @@ func (k *staticDiscovery) Name() string { return "static://" + strings.Join(k.Pe
 
 func (k *staticDiscovery) Stop() {}
 
-func (k *staticDiscovery) IsStatic() bool { return true }
-
 func (k *staticDiscovery) Start(_ string, _ int) (chan string, error) {
 	go func() {
 		for _, peer := range k.Peers {

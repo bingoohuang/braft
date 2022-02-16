@@ -210,7 +210,7 @@ func (n *Node) Start() error {
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, n.DiscoveryName())
 
 	// 防止各个节点同时启动太快，随机休眠
-	util.Think(ss.Or(util.Env("BRAFT_SLEEP", "BSL"), "100ms-3s"))
+	util.Think(ss.Or(util.Env("BRAFT_SLEEP", "BSL"), "10ms-15s"))
 
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
@@ -320,7 +320,7 @@ func (n *Node) handleDiscoveredNodes(discoveryChan chan string) {
 			peer = fmt.Sprintf("%s:%d", peerHost, EnvRport)
 		}
 
-		if rsp, err := GetPeerDetails(peer); err == nil {
+		if rsp, err := GetPeerDetails(peer, 3*time.Second); err == nil {
 			if n.findServer(rsp.ServerId) {
 				continue
 			}
@@ -349,10 +349,6 @@ func (n *Node) NotifyJoin(node *memberlist.Node) {
 // NotifyLeave triggered when a Node becomes unavailable after a period of time
 // it will remove the unavailable Node from the Raft cluster
 func (n *Node) NotifyLeave(node *memberlist.Node) {
-	if n.Conf.Discovery.IsStatic() {
-		return
-	}
-
 	if n.IsLeader() {
 		nodeID, _ := util.Cut(node.Name, ":")
 		if r := n.Raft.RemoveServer(raft.ServerID(nodeID), 0, 0); r.Error() != nil {
@@ -392,20 +388,27 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 
 	log.Printf("transfer to leader")
 
-	return n.ApplyOnLeader(payload)
+	return n.ApplyOnLeader(payload, 10*time.Second)
 }
 
 // ShortNodeIds returns a sorted list of short node IDs of the current raft cluster.
 func (n *Node) ShortNodeIds() (nodeIds []string) {
 	for _, server := range n.Raft.GetConfiguration().Configuration().Servers {
-		var rid RaftID
-		data, _ := base64.RawURLEncoding.DecodeString(string(server.ID))
-		msgpack.Unmarshal(data, &rid)
+		rid := ParseRaftID(string(server.ID))
 		nodeIds = append(nodeIds, rid.ID)
 	}
 
 	sort.Strings(nodeIds)
 	return
+}
+
+// ParseRaftID parses the coded raft ID string a RaftID structure.
+func ParseRaftID(s string) (rid RaftID) {
+	data, _ := base64.RawURLEncoding.DecodeString(s)
+	if err := msgpack.Unmarshal(data, &rid); err != nil {
+		log.Printf("E! msgpack.Unmarshal raft id %s error:%v", s, err)
+	}
+	return rid
 }
 
 // Distribute distributes the given bean to all the nodes in the cluster.
@@ -450,12 +453,12 @@ func (l *logger) IsInfo() bool  { return false }
 func (l *logger) IsWarn() bool  { return false }
 func (l *logger) IsError() bool { return false }
 
-func (l *logger) ImpliedArgs() []interface{}            { return nil }
-func (l *logger) With(args ...interface{}) hclog.Logger { return l }
-func (l *logger) Name() string                          { return "" }
-func (l *logger) Named(name string) hclog.Logger        { return l }
-func (l *logger) ResetNamed(name string) hclog.Logger   { return l }
-func (l *logger) SetLevel(hclog.Level)                  {}
+func (l *logger) ImpliedArgs() []interface{}       { return nil }
+func (l *logger) With(...interface{}) hclog.Logger { return l }
+func (l *logger) Name() string                     { return "" }
+func (l *logger) Named(string) hclog.Logger        { return l }
+func (l *logger) ResetNamed(string) hclog.Logger   { return l }
+func (l *logger) SetLevel(hclog.Level)             {}
 
 func (l *logger) StandardLogger(*hclog.StandardLoggerOptions) *log.Logger { return nil }
 func (l *logger) StandardWriter(*hclog.StandardLoggerOptions) io.Writer   { return nil }

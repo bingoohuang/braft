@@ -9,9 +9,6 @@ type Discovery interface {
 	// it returns a channel where the node will consume node addresses ("IP:NodeRaftPort") until the channel gets closed
 	Start(nodeID string, nodePort int) (chan string, error)
 
-	// IsStatic indicates whether the actual discovery is static or dynamic.
-	IsStatic() bool
-
 	// Stop should stop the discovery method and all of its goroutines, it should close discovery channel returned in Start
 	Stop()
 }
