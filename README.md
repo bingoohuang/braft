@@ -77,6 +77,30 @@ func main() {
 
 ## demo
 
+### use static discovery
+
+At localhost:
+
+1. `GOLOG_STDOUT=true BRAFT_RPORT=15000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
+2. `GOLOG_STDOUT=true BRAFT_RPORT=16000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
+3. `GOLOG_STDOUT=true BRAFT_RPORT=17000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
+
+At 3-different hosts:
+
+1. `GOLOG_STDOUT=true BRAFT_RPORT=15000 BRAFT_DISCOVERY="host1,host2,host3" braft`
+
+### use mDNS discovery
+
+1. `GOLOG_STDOUT=true braft`
+2. `GOLOG_STDOUT=true braft` (same)
+3. `GOLOG_STDOUT=true braft` (same)
+
+### use k8s discovery
+
+1. `GOLOG_STDOUT=true K8S_SLEEP=50-80s K8N=footstone BDI=k8s K8L=svc=braft ./braft`
+
+### example /raft http rest api result
+
 ```sh
 $ gurl :15002/raft
 GET /raft? HTTP/1.1
@@ -295,6 +319,129 @@ Content-Type: application/json; charset=utf-8
       "GoVersion": "go1.17.5_linux/amd64",
       "AppVersion": "1.0.0",
       "Pcpu": 2.631579
+    }
+  ]
+}
+```
+
+
+```sh
+# gurl http://a.b.c/rig-braft-service/raft
+GET /rig-braft-service/raft? HTTP/1.1
+Host: beta.isignet.cn:36131
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+Gurl-Date: Wed, 16 Feb 2022 03:22:20 GMT
+User-Agent: gurl/1.0.0
+
+
+HTTP/1.1 200 OK
+Server: nginx/1.19.2
+Date: Wed, 16 Feb 2022 03:22:22 GMT
+Content-Type: application/json; charset=utf-8
+Connection: keep-alive
+Vary: Accept-Encoding
+Content-Encoding: gzip
+
+{
+  "CurrentLeader": true,
+  "Discovery": "static://rig-braft-service-0.rig-braft-service,rig-braft-service-1.rig-braft-service,rig-braft-service-2.rig-braft-service",
+  "Leader": "10.42.6.198:11469",
+  "NodeNum": 3,
+  "Nodes": [
+    {
+      "Leader": "10.42.6.198:11469",
+      "ServerID": "hqJJRLsyNUFyZDFqclp2Qmt5bnBWRUI5aGNRS2ZIZGelUnBvcnTNLM2lRHBvcnTNLM6lSHBvcnTNLM-oSG9zdG5hbWWzcmlnLWJyYWZ0LXNlcnZpY2UtMqJJUJGrMTAuNDIuNi4xOTg",
+      "Address": "10.42.6.198:11469",
+      "RaftState": "Leader",
+      "RaftID": {
+        "ID": "25Ard1jrZvBkynpVEB9hcQKfHdg",
+        "Rport": 11469,
+        "Dport": 11470,
+        "Hport": 11471,
+        "Hostname": "rig-braft-service-2",
+        "IP": [
+          "10.42.6.198"
+        ]
+      },
+      "DiscoveryNodes": [
+        "rig-braft-service-0.rig-braft-service",
+        "rig-braft-service-1.rig-braft-service",
+        "rig-braft-service-2.rig-braft-service"
+      ],
+      "StartTime": "2022-02-16T11:06:55.5760445+08:00",
+      "Duration": "15m27.069639007s",
+      "Rss": 49672,
+      "RaftLogSum": 0,
+      "Pid": 12,
+      "GitCommit": "ca3ff05@2022-02-16T11:03:28+08:00",
+      "BuildTime": "2022-02-16T11:05:56+0800",
+      "GoVersion": "go1.17.5_linux/amd64",
+      "AppVersion": "1.2.0",
+      "Pcpu": 2.3118222
+    },
+    {
+      "Leader": "10.42.6.198:11469",
+      "ServerID": "hqJJRLsyNUFyZGRuS1R3bDNDREdMUXpRU3h2U1EzekWlUnBvcnTNLM2lRHBvcnTNLM6lSHBvcnTNLM-oSG9zdG5hbWWzcmlnLWJyYWZ0LXNlcnZpY2UtMaJJUJGrMTAuNDIuNi4xOTk",
+      "Address": "10.42.6.199:11469",
+      "RaftState": "Follower",
+      "RaftID": {
+        "ID": "25ArddnKTwl3CDGLQzQSxvSQ3zE",
+        "Rport": 11469,
+        "Dport": 11470,
+        "Hport": 11471,
+        "Hostname": "rig-braft-service-1",
+        "IP": [
+          "10.42.6.199"
+        ]
+      },
+      "DiscoveryNodes": [
+        "rig-braft-service-0.rig-braft-service",
+        "rig-braft-service-1.rig-braft-service",
+        "rig-braft-service-2.rig-braft-service"
+      ],
+      "StartTime": "2022-02-16T11:07:00.867960857+08:00",
+      "Duration": "15m21.77895389s",
+      "Rss": 46216,
+      "RaftLogSum": 0,
+      "Pid": 12,
+      "GitCommit": "ca3ff05@2022-02-16T11:03:28+08:00",
+      "BuildTime": "2022-02-16T11:05:56+0800",
+      "GoVersion": "go1.17.5_linux/amd64",
+      "AppVersion": "1.2.0",
+      "Pcpu": 1.1629363
+    },
+    {
+      "Leader": "10.42.6.198:11469",
+      "ServerID": "hqJJRLsyNUFyaUsyTXhNbDNjTjlIMUJ6MUY4TEZDZTClUnBvcnTNLM2lRHBvcnTNLM6lSHBvcnTNLM-oSG9zdG5hbWWzcmlnLWJyYWZ0LXNlcnZpY2UtMKJJUJGrMTAuNDIuMi4yMTA",
+      "Address": "10.42.2.210:11469",
+      "RaftState": "Follower",
+      "RaftID": {
+        "ID": "25AriK2MxMl3cN9H1Bz1F8LFCe0",
+        "Rport": 11469,
+        "Dport": 11470,
+        "Hport": 11471,
+        "Hostname": "rig-braft-service-0",
+        "IP": [
+          "10.42.2.210"
+        ]
+      },
+      "DiscoveryNodes": [
+        "rig-braft-service-0.rig-braft-service",
+        "rig-braft-service-1.rig-braft-service",
+        "rig-braft-service-2.rig-braft-service"
+      ],
+      "StartTime": "2022-02-16T11:07:37.501965271+08:00",
+      "Duration": "14m45.146689237s",
+      "Rss": 43672,
+      "RaftLogSum": 0,
+      "Pid": 13,
+      "GitCommit": "ca3ff05@2022-02-16T11:03:28+08:00",
+      "BuildTime": "2022-02-16T11:05:56+0800",
+      "GoVersion": "go1.17.5_linux/amd64",
+      "AppVersion": "1.2.0",
+      "Pcpu": 1.5182345
     }
   ]
 }
