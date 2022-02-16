@@ -13,6 +13,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/vmihailenco/msgpack/v5"
+
 	"google.golang.org/grpc/credentials/insecure"
 
 	transport "github.com/Jille/raft-grpc-transport"
@@ -25,13 +28,11 @@ import (
 	"github.com/bingoohuang/gg/pkg/goip"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/golog/pkg/logfmt"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
-	"github.com/vmihailenco/msgpack/v5"
 	"google.golang.org/grpc"
 )
 
@@ -345,7 +346,9 @@ func (n *Node) NotifyJoin(node *memberlist.Node) {
 		nodeID, nodePort := util.Cut(node.Name, ":")
 		nodeAddr := fmt.Sprintf("%s:%s", node.Addr, nodePort)
 		if r := n.Raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(nodeAddr), 0, 0); r.Error() != nil {
-			log.Println(r.Error().Error())
+			log.Printf("raft node joined: %s, addr: %s error: %v", node.Name, nodeAddr, r.Error())
+		} else {
+			log.Printf("raft node joined: %s, addr: %s sucessfully", node.Name, nodeAddr)
 		}
 	}
 }
@@ -356,7 +359,9 @@ func (n *Node) NotifyLeave(node *memberlist.Node) {
 	if n.IsLeader() {
 		nodeID, _ := util.Cut(node.Name, ":")
 		if r := n.Raft.RemoveServer(raft.ServerID(nodeID), 0, 0); r.Error() != nil {
-			log.Println(r.Error().Error())
+			log.Printf("raft node left: %s, addr: %s error: %v", node.Name, node.Addr, r.Error())
+		} else {
+			log.Printf("raft node left: %s, addr: %s sucessfully", node.Name, node.Addr)
 		}
 	}
 }
@@ -386,12 +391,10 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 			return nil, err
 		}
 
-		return rsp,
-			nil
+		return rsp, nil
 	}
 
 	log.Printf("transfer to leader")
-
 	return n.ApplyOnLeader(payload, 10*time.Second)
 }
 

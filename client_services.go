@@ -13,16 +13,12 @@ import (
 
 	"github.com/bingoohuang/braft/pidusage"
 
-	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/proto"
-	"github.com/hashicorp/go-multierror"
 )
 
 // NewClientGrpcService creates a new ClientGrpcService.
 func NewClientGrpcService(node *Node) *ClientGrpcServices {
-	return &ClientGrpcServices{
-		Node: node,
-	}
+	return &ClientGrpcServices{Node: node}
 }
 
 // ClientGrpcServices is the client of grpc services.
@@ -48,21 +44,12 @@ func (s *ClientGrpcServices) ApplyLog(_ context.Context, r *proto.ApplyRequest) 
 var ErrNone = errors.New("")
 
 // GetDetails returns the node details.
-func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsRequest) (response *proto.GetDetailsResponse, err error) {
-	var resultErr error
-	var discoveryNodes []string
-	if search, ok := s.Node.Conf.Discovery.(discovery.Searchable); ok {
-		nodes, err := search.Search()
-		if err != nil {
-			resultErr = multierror.Append(resultErr, err)
-		}
-		discoveryNodes = nodes
-	}
-	if resultErr == nil {
+func (s *ClientGrpcServices) GetDetails(ctx context.Context, r *proto.GetDetailsRequest) (response *proto.GetDetailsResponse, err error) {
+	discoveryNodes, resultErr := s.Node.Conf.Discovery.Search()
+	if resultErr != nil {
 		resultErr = ErrNone
 	}
 
-	os.Getpid()
 	return &proto.GetDetailsResponse{
 		ServerId:       s.Node.ID,
 		RaftState:      s.Node.Raft.State().String(),
