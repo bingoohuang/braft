@@ -2,12 +2,13 @@ package braft
 
 import (
 	"context"
-	"errors"
 	"log"
 	"os"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/bingoohuang/braft/util"
 
 	"github.com/bingoohuang/gg/pkg/jsoni"
 
@@ -40,15 +41,9 @@ func (s *ClientGrpcServices) ApplyLog(_ context.Context, r *proto.ApplyRequest) 
 	return &proto.ApplyResponse{Response: respPayload}, nil
 }
 
-// ErrNone is a special error which means no error occurred.
-var ErrNone = errors.New("")
-
 // GetDetails returns the node details.
-func (s *ClientGrpcServices) GetDetails(ctx context.Context, r *proto.GetDetailsRequest) (response *proto.GetDetailsResponse, err error) {
+func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsRequest) (response *proto.GetDetailsResponse, err error) {
 	discoveryNodes, resultErr := s.Node.Conf.Discovery.Search()
-	if resultErr != nil {
-		resultErr = ErrNone
-	}
 
 	return &proto.GetDetailsResponse{
 		ServerId:       s.Node.ID,
@@ -57,7 +52,7 @@ func (s *ClientGrpcServices) GetDetails(ctx context.Context, r *proto.GetDetails
 		DiscoveryPort:  int32(EnvDport),
 		HttpPort:       int32(EnvHport),
 		RaftPort:       int32(EnvRport),
-		Error:          resultErr.Error(),
+		Error:          util.ErrorString(resultErr),
 		DiscoveryNodes: discoveryNodes,
 		StartTime:      s.Node.StartTime.Format(time.RFC3339Nano),
 		Duration:       time.Since(s.Node.StartTime).String(),

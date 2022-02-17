@@ -12,6 +12,15 @@ import (
 	"github.com/bingoohuang/gg/pkg/thinktime"
 )
 
+// ErrorString returns the error string, err can be nil.
+func ErrorString(err error) string {
+	if err != nil {
+		return err.Error()
+	}
+
+	return ""
+}
+
 func OrSlice(a, b map[string]string) map[string]string {
 	if len(a) > 0 {
 		return a
