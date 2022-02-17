@@ -8,6 +8,7 @@ service Raft {
 }
 
 message GetDetailsRequest {
+  string addr = 1;
 }
 
 message GetDetailsResponse {
@@ -26,6 +27,7 @@ message GetDetailsResponse {
   uint64 pid = 13;
   float pcpu = 14;
   string bizData = 15;
+  repeated string addr = 16;
 }
 
 message ApplyRequest {

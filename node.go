@@ -52,6 +52,8 @@ type Node struct {
 	StartTime   time.Time
 	distributor *fsm.Distributor
 	raftLogSum  *uint64
+
+	addrQueue *util.UniqueQueue
 }
 
 // Config is the configuration of the node.
@@ -206,6 +208,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 		discoveryConfig:  discoveryConfig,
 		distributor:      fsm.NewDistributor(),
 		raftLogSum:       &sm.RaftLogSum,
+		addrQueue:        util.NewUniqueQueue(100),
 	}, nil
 }
 

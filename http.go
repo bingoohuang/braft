@@ -110,6 +110,8 @@ type RaftNode struct {
 	Pcpu       float32
 
 	BizData json.RawMessage
+
+	Addr []string
 }
 
 // ServeRaft services the raft http api.
@@ -141,6 +143,8 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 				AppVersion: v.AppVersion,
 
 				BizData: json.RawMessage(rsp.BizData),
+
+				Addr: rsp.Addr,
 			})
 		}
 	}

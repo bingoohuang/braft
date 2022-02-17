@@ -52,7 +52,7 @@ func GetPeerDetails(addr string, timeout time.Duration) (*proto.GetDetailsRespon
 		return nil, err
 	}
 
-	return c.GetDetails(ctx, &proto.GetDetailsRequest{})
+	return c.GetDetails(ctx, &proto.GetDetailsRequest{Addr: addr})
 }
 
 // GetRaftClient returns the raft client with timeout context.

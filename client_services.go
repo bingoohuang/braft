@@ -42,8 +42,12 @@ func (s *ClientGrpcServices) ApplyLog(_ context.Context, r *proto.ApplyRequest) 
 }
 
 // GetDetails returns the node details.
-func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsRequest) (response *proto.GetDetailsResponse, err error) {
+func (s *ClientGrpcServices) GetDetails(c context.Context, r *proto.GetDetailsRequest) (response *proto.GetDetailsResponse, err error) {
 	discoveryNodes, resultErr := s.Node.Conf.Discovery.Search()
+
+	if r.Addr != "" {
+		s.Node.addrQueue.Put(r.Addr)
+	}
 
 	return &proto.GetDetailsResponse{
 		ServerId:       s.Node.ID,
@@ -74,6 +78,7 @@ func (s *ClientGrpcServices) GetDetails(context.Context, *proto.GetDetailsReques
 		RaftLogSum: atomic.LoadUint64(s.Node.raftLogSum),
 		Pid:        uint64(os.Getpid()),
 		BizData:    createBizData(s.Node.Conf.BizData),
+		Addr:       s.Node.addrQueue.Get(),
 	}, nil
 }
 
