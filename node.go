@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -44,7 +43,7 @@ type Node struct {
 	Raft             *raft.Raft
 	GrpcServer       *grpc.Server
 	TransportManager *transport.Manager
-	discoveryConfig  *memberlist.Config
+	memberConfig     *memberlist.Config
 	mList            *memberlist.Memberlist
 	stopped          uint32
 	Conf             *Config
@@ -62,33 +61,8 @@ type Config struct {
 	DataDir      string
 	Discovery    discovery.Discovery
 	Services     []fsm.Service
-	LeaderChange func(becameLeader bool)
+	LeaderChange LeaderChanger
 	BizData      func() interface{}
-}
-
-// ConfigFn is the function option pattern for the NodeConfig.
-type ConfigFn func(*Config)
-
-// WithLeaderChange specifies the leader change callback.
-func WithLeaderChange(s func(becameLeader bool)) ConfigFn {
-	return func(c *Config) { c.LeaderChange = s }
-}
-
-// WithBizData specifies the biz data of current node for the node for /raft api .
-func WithBizData(s func() interface{}) ConfigFn { return func(c *Config) { c.BizData = s } }
-
-// WithServices specifies the services for the FSM.
-func WithServices(s ...fsm.Service) ConfigFn { return func(c *Config) { c.Services = s } }
-
-// WithDiscovery specifies the discovery method of raft cluster nodes.
-func WithDiscovery(s discovery.Discovery) ConfigFn { return func(c *Config) { c.Discovery = s } }
-
-// WithDataDir specifies the data directory.
-func WithDataDir(s string) ConfigFn { return func(c *Config) { c.DataDir = s } }
-
-// WithTypeRegister specifies the serializer.TypeRegister of the raft log messages.
-func WithTypeRegister(s *marshal.TypeRegister) ConfigFn {
-	return func(c *Config) { c.TypeRegister = s }
 }
 
 // RaftID is the structure of node ID.
@@ -101,38 +75,11 @@ type RaftID struct {
 
 // NewNode returns an BRaft node.
 func NewNode(fns ...ConfigFn) (*Node, error) {
-	conf := &Config{}
-	for _, f := range fns {
-		f(conf)
-	}
-	if conf.TypeRegister == nil {
-		conf.TypeRegister = marshal.NewTypeRegister(marshal.NewMsgPacker())
-	}
-	if conf.Discovery == nil {
-		conf.Discovery = CreateDiscovery(DefaultDiscovery)
-	}
-	if len(conf.Services) == 0 {
-		conf.Services = []fsm.Service{fsm.NewMemKvService()}
+	conf, err := createConfig(fns)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, service := range conf.Services {
-		service.RegisterMarshalTypes(conf.TypeRegister)
-	}
-
-	if conf.DataDir == "" {
-		dir, err := ioutil.TempDir("", "braft")
-		if err != nil {
-			return nil, err
-		}
-		conf.DataDir = dir
-	} else {
-		// stable/log/snapshot store config
-		if !util.IsDir(conf.DataDir) {
-			if err := util.RemoveCreateDir(conf.DataDir); err != nil {
-				return nil, err
-			}
-		}
-	}
 	log.Printf("node data dir: %s", conf.DataDir)
 
 	h, _ := os.Hostname()
@@ -180,15 +127,14 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	// FSM 有限状态机
 	sm := fsm.NewRoutingFSM(raftID.ID, conf.Services, conf.TypeRegister)
 
-	// memberlist config
-	discoveryConfig := memberlist.DefaultLocalConfig()
-	discoveryConfig.BindPort = EnvDport
-	discoveryConfig.Name = fmt.Sprintf("%s:%d", nodeID, EnvRport)
-	discoveryConfig.Logger = log.Default()
+	memberConfig := memberlist.DefaultLocalConfig()
+	memberConfig.BindPort = EnvDport
+	memberConfig.Name = fmt.Sprintf("%s:%d", nodeID, EnvRport)
+	memberConfig.Logger = log.Default()
 
 	// default raft config
 	addr := fmt.Sprintf("%s:%d", EnvIP, EnvRport)
-	// grpc transport, Transpot Raft节点之间的通信通道
+	// grpc transport, Transport Raft节点之间的通信通道
 	t := transport.New(raft.ServerAddress(addr),
 		[]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())})
 
@@ -205,7 +151,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 		Raft:             raftServer,
 		TransportManager: t,
 		Conf:             conf,
-		discoveryConfig:  discoveryConfig,
+		memberConfig:     memberConfig,
 		distributor:      fsm.NewDistributor(),
 		raftLogSum:       &sm.RaftLogSum,
 		addrQueue:        util.NewUniqueQueue(100),
@@ -213,7 +159,7 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 }
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
-func (n *Node) Start() error {
+func (n *Node) Start() (err error) {
 	n.StartTime = time.Now()
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, n.DiscoveryName())
 
@@ -223,24 +169,18 @@ func (n *Node) Start() error {
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
 
-	// raft server
-	configuration := raft.Configuration{
-		Servers: []raft.Server{
-			{ID: raft.ServerID(n.ID), Address: n.TransportManager.Transport().LocalAddr()},
-		},
-	}
-	f := n.Raft.BootstrapCluster(configuration)
+	f := n.Raft.BootstrapCluster(raft.Configuration{
+		Servers: []raft.Server{{ID: raft.ServerID(n.ID), Address: n.TransportManager.Transport().LocalAddr()}},
+	})
 	if err := f.Error(); err != nil {
 		return err
 	}
 
 	// memberlist discovery
-	n.discoveryConfig.Events = n
-	list, err := memberlist.Create(n.discoveryConfig)
-	if err != nil {
+	n.memberConfig.Events = n
+	if n.mList, err = memberlist.Create(n.memberConfig); err != nil {
 		return err
 	}
-	n.mList = list
 
 	// grpc server
 	grpcListen, err := net.Listen("tcp", n.addr)

@@ -116,46 +116,52 @@ type RaftNode struct {
 
 // ServeRaft services the raft http api.
 func (n *Node) ServeRaft(ctx *gin.Context) {
-	var nodes []RaftNode
-	for _, server := range n.Raft.GetConfiguration().Configuration().Servers {
-		if rsp, err := GetPeerDetails(string(server.Address), 3*time.Second); err != nil {
-			log.Printf("GetPeerDetails error: %v", err)
-			nodes = append(nodes, RaftNode{Address: string(server.Address), Error: err.Error()})
-		} else {
-			rid := ParseRaftID(rsp.ServerId)
-			nodes = append(nodes, RaftNode{
-				RaftID:  rid,
-				Address: string(server.Address), Leader: rsp.Leader,
-				ServerID: rsp.ServerId, RaftState: rsp.RaftState,
-				Error:          rsp.Error,
-				DiscoveryNodes: rsp.DiscoveryNodes,
-				StartTime:      rsp.StartTime,
-				Duration:       rsp.Duration,
-
-				Rss:        rsp.Rss,
-				Pcpu:       rsp.Pcpu,
-				RaftLogSum: rsp.RaftLogSum,
-				Pid:        rsp.Pid,
-
-				GitCommit:  v.GitCommit,
-				BuildTime:  v.BuildTime,
-				GoVersion:  v.GoVersion,
-				AppVersion: v.AppVersion,
-
-				BizData: json.RawMessage(rsp.BizData),
-
-				Addr: rsp.Addr,
-			})
-		}
-	}
-
-	ctx.JSON(http.StatusOK, map[string]interface{}{
+	nodes := n.GetRaftNodesInfo()
+	ctx.JSON(http.StatusOK, gin.H{
 		"Leader":        n.Raft.Leader(),
 		"Nodes":         nodes,
 		"NodeNum":       len(nodes),
 		"Discovery":     n.DiscoveryName(),
 		"CurrentLeader": n.IsLeader(),
 	})
+}
+
+// GetRaftNodesInfo return the raft nodes information.
+func (n *Node) GetRaftNodesInfo() (nodes []RaftNode) {
+	for _, server := range n.Raft.GetConfiguration().Configuration().Servers {
+		rsp, err := GetPeerDetails(string(server.Address), 3*time.Second)
+		if err != nil {
+			log.Printf("GetPeerDetails error: %v", err)
+			nodes = append(nodes, RaftNode{Address: string(server.Address), Error: err.Error()})
+			continue
+		}
+
+		rid := ParseRaftID(rsp.ServerId)
+		nodes = append(nodes, RaftNode{
+			RaftID:  rid,
+			Address: string(server.Address), Leader: rsp.Leader,
+			ServerID: rsp.ServerId, RaftState: rsp.RaftState,
+			Error:          rsp.Error,
+			DiscoveryNodes: rsp.DiscoveryNodes,
+			StartTime:      rsp.StartTime,
+			Duration:       rsp.Duration,
+
+			Rss:        rsp.Rss,
+			Pcpu:       rsp.Pcpu,
+			RaftLogSum: rsp.RaftLogSum,
+			Pid:        rsp.Pid,
+
+			GitCommit:  v.GitCommit,
+			BuildTime:  v.BuildTime,
+			GoVersion:  v.GoVersion,
+			AppVersion: v.AppVersion,
+
+			BizData: json.RawMessage(rsp.BizData),
+
+			Addr: rsp.Addr,
+		})
+	}
+	return
 }
 
 // ServeKV services the kv set/get http api.
