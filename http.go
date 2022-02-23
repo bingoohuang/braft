@@ -59,9 +59,7 @@ func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
 	r.GET("/raft", n.ServeRaft)
 
 	if c.EnableKv {
-		r.GET("/kv", n.ServeKV)
-		r.POST("/kv", n.ServeKV)
-		r.DELETE("/kv", n.ServeKV)
+		n.RegisterServeKV(r, "/kv")
 	}
 
 	for _, h := range c.Handlers {
@@ -167,6 +165,13 @@ func (n *Node) GetRaftNodesInfo() (nodes []RaftNode) {
 		})
 	}
 	return
+}
+
+// RegisterServeKV register kv service for the gin route.
+func (n *Node) RegisterServeKV(r gin.IRoutes, path string) {
+	r.GET(path, n.ServeKV)
+	r.POST(path, n.ServeKV)
+	r.DELETE(path, n.ServeKV)
 }
 
 // ServeKV services the kv set/get http api.
