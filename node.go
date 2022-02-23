@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"google.golang.org/grpc/reflection"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/vmihailenco/msgpack/v5"
 
@@ -193,6 +195,10 @@ func (n *Node) Start() (err error) {
 
 	// register client services
 	proto.RegisterRaftServer(n.GrpcServer, NewClientGrpcService(n))
+
+	if off := ss.ParseBool(util.Env("DISABLE_GRPC_REFLECTION", "DGR")); !off {
+		reflection.Register(n.GrpcServer)
+	}
 
 	logfmt.RegisterLevelKey("[DEBUG]", logrus.DebugLevel)
 
