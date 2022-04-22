@@ -120,6 +120,23 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 }
 
 var (
+	DefaultMdnsService      string
+	DefaultK8sNamespace     string
+	DefaultK8sPortName      string
+	DefaultK8sServiceLabels map[string]string
+	DefaultDiscovery        string
+	EnvIP                   string
+	EnvRport                int
+	EnvDport                int
+	EnvHport                int
+	DefaultStaticPeers      []string
+)
+
+func init() {
+	Setup()
+}
+
+func Setup() {
 	// DefaultMdnsService is the default mDNS service.
 	DefaultMdnsService = ss.Or(util.Env("MDNS_SERVICE", "MDS"), "_braft._tcp,_windows")
 	// DefaultK8sNamespace is the default namespace for k8s.
@@ -130,7 +147,7 @@ var (
 	// e.g. svc=braft,type=demo
 	DefaultK8sServiceLabels = ss.SplitToMap(util.Env("K8S_LABELS", "K8L"), "=", ",")
 	// DefaultStaticPeers is the default static peers of static raft cluster nodes.
-	DefaultStaticPeers []string
+
 	// DefaultDiscovery is the default discovery method for the raft cluster member discovery.
 	// e.g.
 	// static:192.168.1.1,192.168.1.2,192.168.1.3
@@ -166,4 +183,4 @@ var (
 	EnvDport = util.Atoi(util.Env("BRAFT_DPORT", "BDP"), EnvRport+1)
 	// EnvHport is used for the http service.
 	EnvHport = util.Atoi(util.Env("BRAFT_HPORT", "BHP"), EnvDport+1)
-)
+}

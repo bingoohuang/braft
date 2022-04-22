@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"net"
 	"os"
@@ -54,6 +55,12 @@ func Think(thinkTime string) {
 func Env(name ...string) string {
 	for _, n := range name {
 		if v := os.Getenv(n); v != "" {
+			return v
+		}
+	}
+
+	for _, n := range name {
+		if v := viper.GetString(n); v != "" {
 			return v
 		}
 	}
