@@ -4,7 +4,7 @@ import "time"
 
 // Ticker defines a ticker.
 type Ticker struct {
-	stop     chan bool
+	stop     chan struct{}
 	tickerFn []func()
 	d        time.Duration
 }
@@ -29,7 +29,7 @@ func New(d time.Duration, fns ...ConfigFn) *Ticker {
 	}
 
 	j := &Ticker{
-		stop:     make(chan bool, 1),
+		stop:     make(chan struct{}, 1),
 		d:        d,
 		tickerFn: c.TickerFns,
 	}
@@ -60,7 +60,7 @@ func (j *Ticker) start() {
 
 // Stop stops the ticker.
 func (j *Ticker) Stop() {
-	close(j.stop)
+	j.stop <- struct{}{}
 }
 
 func (j *Ticker) execFns() {
