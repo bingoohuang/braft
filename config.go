@@ -12,11 +12,32 @@ import (
 // ConfigFn is the function option pattern for the NodeConfig.
 type ConfigFn func(*Config)
 
-// LeaderChanger defines the leader change callback func prototype.
-type LeaderChanger func(becameLeader bool)
+type NodeState int
+
+const (
+	NodeFollower NodeState = iota
+	NodeLeader
+	NodeShuttingDown
+)
+
+func (n NodeState) String() string {
+	switch n {
+	case NodeFollower:
+		return "NodeFollower"
+	case NodeLeader:
+		return "NodeLeader"
+	case NodeShuttingDown:
+		return "NodeShuttingDown"
+	default:
+		return "Unknown"
+	}
+}
+
+// NodeStateChanger defines the leader change callback func prototype.
+type NodeStateChanger func(n *Node, nodeState NodeState)
 
 // WithLeaderChange specifies the leader change callback.
-func WithLeaderChange(s LeaderChanger) ConfigFn { return func(c *Config) { c.LeaderChange = s } }
+func WithLeaderChange(s NodeStateChanger) ConfigFn { return func(c *Config) { c.LeaderChange = s } }
 
 // WithBizData specifies the biz data of current node for the node for /raft api .
 func WithBizData(s func() interface{}) ConfigFn { return func(c *Config) { c.BizData = s } }
@@ -33,6 +54,19 @@ func WithDataDir(s string) ConfigFn { return func(c *Config) { c.DataDir = s } }
 // WithTypeRegister specifies the serializer.TypeRegister of the raft log messages.
 func WithTypeRegister(s *marshal.TypeRegister) ConfigFn {
 	return func(c *Config) { c.TypeRegister = s }
+}
+
+// WithEnableHTTP specifies whether to enable the http service.
+func WithEnableHTTP(v bool) ConfigFn { return func(c *Config) { c.EnableHTTP = v } }
+
+// WithHttpFns specifies the http service.
+func WithHttpFns(s ...HTTPConfigFn) ConfigFn {
+	return func(c *Config) {
+		c.HTTPConfigFns = append(c.HTTPConfigFns, s...)
+		if !c.EnableHTTP && len(c.HTTPConfigFns) > 0 {
+			c.EnableHTTP = true
+		}
+	}
 }
 
 func createConfig(fns []ConfigFn) (*Config, error) {

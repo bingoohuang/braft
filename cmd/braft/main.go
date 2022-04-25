@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/bingoohuang/braft/ticker"
 	"log"
 	"net/http"
 	"os"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/bingoohuang/braft/marshal"
 	"github.com/bingoohuang/gg/pkg/flagparse"
@@ -27,20 +29,32 @@ import (
 func main() {
 	dh := &DemoPicker{}
 	braft.DefaultMdnsService = "_braft._tcp,_demo"
+	t := ticker.New(10 * time.Second)
+
 	node, err := braft.NewNode(
 		braft.WithServices(fsm.NewMemKvService(), fsm.NewDistributeService(dh)),
-	)
+		braft.WithLeaderChange(func(n *braft.Node, nodeState braft.NodeState) {
+			log.Printf("nodeState: %s", nodeState)
+			if nodeState == braft.NodeLeader {
+				raftState := n.Raft.State().String()
+				t.Start(func() {
+					log.Printf("ticker ticker, I'm %s", raftState)
+				})
+			} else {
+				t.Stop()
+			}
+		}),
+		braft.WithHttpFns(
+			braft.WithHandler(http.MethodPost, "/distribute", dh.distributePost),
+			braft.WithHandler(http.MethodGet, "/distribute", dh.distributeGet),
+		))
+
 	if err != nil {
 		log.Fatalf("failed to new node, error: %v", err)
 	}
 	if err := node.Start(); err != nil {
 		log.Fatalf("failed to start node, error: %v", err)
 	}
-
-	node.RunHTTP(
-		braft.WithHandler(http.MethodPost, "/distribute", dh.distributePost),
-		braft.WithHandler(http.MethodGet, "/distribute", dh.distributeGet),
-	)
 }
 
 type DemoItem struct {

@@ -59,22 +59,24 @@ func main() {
 
 ## env VARIABLES
 
-| NAME                    | ACRONYM | USAGE                                | DEFAULT              | EXAMPELE                                                                                                                                             |
-|-------------------------|---------|--------------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
-| GOLOG_STDOUT            | N/A     | print log on stdout                  | N/A                  | `export GOLOG_STDOUT=true`                                                                                                                           |
-| BRAFT_DISCOVERY         | BDI     | discovery configuration              | mdns                 | `export BRAFT_DISCOVERY="mdns:_braft._tcp"`<p>`export BRAFT_DISCOVERY="static:192.168.1.1,192.168.1.2,192.168.1.3"`<p>`export BRAFT_DISCOVERY="k8s"` |
-| BRAFT_IP                | BIP     | specify the IP                       | first host IP        | `export BRAFT_IP=192.168.1.1`                                                                                                                        |
-| BRAFT_IF                | BIF     | specify the IF name                  | N/A                  | `export BRAFT_IF=eth0`                                                                                                                               |
-| BRAFT_RPORT             | BRP     | specify the raft port                | 15000                | `export BRAFT_RPORT=15000`                                                                                                                           |
-| BRAFT_DPORT             | BDP     | specify the discovery port           | BRAFT_RPORT+1        | `export BRAFT_DPORT=15001`                                                                                                                           |
-| BRAFT_HPORT             | BHP     | specify the http port                | BRAFT_DPORT+1        | `export BRAFT_HPORT=15002`                                                                                                                           |
-| BRAFT_SLEEP             | BSL     | random sleep to startup raft cluster | 10ms-15s             | `export BRAFT_SLEEP=100ms-3s`                                                                                                                        |
-| MDNS_SERVICE            | MDS     | mDNS Service name (e.g. _http._tcp.) | _braft._tcp,_windows | `export MDS=_braft._tcp,_windows`                                                                                                                    |
-| K8S_NAMESPACE           | K8N     | k8s namespace                        | (empty)              | `export K8S_NAMESPACE=prod`                                                                                                                          |
-| K8S_LABELS              | K8L     | service labels                       | (empty)              | `export K8S_LABELS=svc=braft`                                                                                                                        |
-| K8S_PORTNAME            | K8P     | container tcp port name              | (empty)              | `export K8S_PORTNAME=http`                                                                                                                           |
-| K8S_SLEEP               | N/A     | k8s discovery sleep before start     | 15-30s               | `export K8S_SLEEP=30-50s`                                                                                                                            |
-| DISABLE_GRPC_REFLECTION | DGR     | disable grpc reflection              | off                  | `export DISABLE_GRPC_REFLECTION=off`                                                                                                                 |
+| NAME                    | ACRONYM | USAGE                                        | DEFAULT              | EXAMPELE                                                                                                                                             |
+|-------------------------|---------|----------------------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| GOLOG_STDOUT            | N/A     | print log on stdout                          | N/A                  | `export GOLOG_STDOUT=true`                                                                                                                           |
+| BRAFT_DISCOVERY         | BDI     | discovery configuration                      | mdns                 | `export BRAFT_DISCOVERY="mdns:_braft._tcp"`<p>`export BRAFT_DISCOVERY="static:192.168.1.1,192.168.1.2,192.168.1.3"`<p>`export BRAFT_DISCOVERY="k8s"` |
+| BRAFT_IP                | BIP     | specify the IP                               | first host IP        | `export BRAFT_IP=192.168.1.1`                                                                                                                        |
+| BRAFT_IF                | BIF     | specify the IF name                          | N/A                  | `export BRAFT_IF=eth0`                                                                                                                               |
+| BRAFT_RESTART_MIN       | N/A     | specify restart min wait if no leader        | 90s                  | `export BRAFT_RESTART_MIN=30s`                                                                                                                       |
+| BRAFT_LEADER_STEADY     | N/A     | specify the delay time after leader changing | 60s                  | `export BRAFT_LEADER_STEADY=30s`                                                                                                                     |
+| BRAFT_RPORT             | BRP     | specify the raft port                        | 15000                | `export BRAFT_RPORT=15000`                                                                                                                           |
+| BRAFT_DPORT             | BDP     | specify the discovery port                   | BRAFT_RPORT+1        | `export BRAFT_DPORT=15001`                                                                                                                           |
+| BRAFT_HPORT             | BHP     | specify the http port                        | BRAFT_DPORT+1        | `export BRAFT_HPORT=15002`                                                                                                                           |
+| BRAFT_SLEEP             | BSL     | random sleep to startup raft cluster         | 10ms-15s             | `export BRAFT_SLEEP=100ms-3s`                                                                                                                        |
+| MDNS_SERVICE            | MDS     | mDNS Service name (e.g. _http._tcp.)         | _braft._tcp,_windows | `export MDS=_braft._tcp,_windows`                                                                                                                    |
+| K8S_NAMESPACE           | K8N     | k8s namespace                                | (empty)              | `export K8S_NAMESPACE=prod`                                                                                                                          |
+| K8S_LABELS              | K8L     | service labels                               | (empty)              | `export K8S_LABELS=svc=braft`                                                                                                                        |
+| K8S_PORTNAME            | K8P     | container tcp port name                      | (empty)              | `export K8S_PORTNAME=http`                                                                                                                           |
+| K8S_SLEEP               | N/A     | k8s discovery sleep before start             | 15-30s               | `export K8S_SLEEP=30-50s`                                                                                                                            |
+| DISABLE_GRPC_REFLECTION | DGR     | disable grpc reflection                      | off                  | `export DISABLE_GRPC_REFLECTION=off`                                                                                                                 |
 
 ## demo
 
@@ -82,9 +84,9 @@ func main() {
 
 At localhost:
 
-1. `GOLOG_STDOUT=true BRAFT_RPORT=15000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
-2. `GOLOG_STDOUT=true BRAFT_RPORT=16000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
-3. `GOLOG_STDOUT=true BRAFT_RPORT=17000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
+1. `BRAFT_RESTART_MIN=10s BRAFT_LEADER_STEADY=10s GOLOG_STDOUT=true BRAFT_RPORT=15000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
+2. `BRAFT_RESTART_MIN=10s BRAFT_LEADER_STEADY=10s GOLOG_STDOUT=true BRAFT_RPORT=16000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
+3. `BRAFT_RESTART_MIN=10s BRAFT_LEADER_STEADY=10s GOLOG_STDOUT=true BRAFT_RPORT=17000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
 
 At 3-different hosts:
 

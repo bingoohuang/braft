@@ -62,6 +62,7 @@ func (k *kubernetesDiscovery) discovery() {
 	for {
 		select {
 		case <-k.stopChan:
+			k.stopChan <- true
 			return
 		case <-time.After(time.Duration(randx.IntBetween(1, 6)) * time.Second):
 			k.search(false)
@@ -139,4 +140,7 @@ func (k *kubernetesDiscovery) findPort(pod core.Pod) (p core.ContainerPort) {
 	return p
 }
 
-func (k *kubernetesDiscovery) Stop() { k.stopChan <- true }
+func (k *kubernetesDiscovery) Stop() {
+	k.stopChan <- true
+	<-k.stopChan
+}

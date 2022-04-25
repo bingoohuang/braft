@@ -29,7 +29,6 @@ func New(d time.Duration, fns ...ConfigFn) *Ticker {
 	}
 
 	j := &Ticker{
-		stop:     make(chan struct{}, 1),
 		d:        d,
 		tickerFn: c.TickerFns,
 	}
@@ -40,6 +39,7 @@ func New(d time.Duration, fns ...ConfigFn) *Ticker {
 // if tickerFns are passed, they will overwrite the previous passed in NewTicker call.
 func (j *Ticker) Start(fns ...func()) {
 	j.tickerFn = append(j.tickerFn, fns...)
+	j.stop = make(chan struct{})
 	go j.start()
 }
 
@@ -60,7 +60,10 @@ func (j *Ticker) start() {
 
 // Stop stops the ticker.
 func (j *Ticker) Stop() {
-	j.stop <- struct{}{}
+	select {
+	case j.stop <- struct{}{}:
+	default:
+	}
 }
 
 func (j *Ticker) execFns() {

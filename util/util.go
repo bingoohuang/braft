@@ -52,6 +52,20 @@ func Think(thinkTime string) {
 	}
 }
 
+func EnvDuration(name string, defaultValue time.Duration) time.Duration {
+	env := Env(name)
+	if env == "" {
+		return defaultValue
+	}
+
+	d, err := time.ParseDuration(env)
+	if err != nil {
+		log.Printf("E! parse env $%s = %s failed: %v", name, env, err)
+		return defaultValue
+	}
+	return d
+}
+
 func Env(name ...string) string {
 	for _, n := range name {
 		if v := os.Getenv(n); v != "" {

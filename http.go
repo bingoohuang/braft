@@ -46,8 +46,8 @@ func WithHandler(method, path string, handler HandlerFunc) HTTPConfigFn {
 	}
 }
 
-// RunHTTP run http service on block.
-func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
+// runHTTP run http service on block.
+func (n *Node) runHTTP(fs ...HTTPConfigFn) {
 	c := &HTTPConfig{EnableKv: true}
 	for _, f := range fs {
 		f(c)
@@ -70,9 +70,17 @@ func (n *Node) RunHTTP(fs ...HTTPConfigFn) {
 		})
 	}
 
-	if err := r.Run(fmt.Sprintf(":%d", EnvHport)); err != nil {
-		log.Fatalf("failed to run %d, error: %v", EnvHport, err)
+	n.httpServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", EnvHport),
+		Handler: r,
 	}
+
+	go func() {
+		if err := n.httpServer.ListenAndServe(); err != nil {
+			log.Printf("E! listen: %s\n", err)
+		}
+	}()
+
 }
 
 func getQuery(ctx *gin.Context, k ...string) string {
@@ -129,7 +137,7 @@ func (n *Node) GetRaftNodesInfo() (nodes []RaftNode) {
 	for _, server := range n.Raft.GetConfiguration().Configuration().Servers {
 		rsp, err := GetPeerDetails(string(server.Address), 3*time.Second)
 		if err != nil {
-			log.Printf("GetPeerDetails error: %v", err)
+			log.Printf("E! GetPeerDetails error: %v", err)
 			nodes = append(nodes, RaftNode{Address: string(server.Address), Error: err.Error()})
 			continue
 		}

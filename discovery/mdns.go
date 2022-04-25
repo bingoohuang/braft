@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/ss"
@@ -19,6 +20,7 @@ type mdnsDiscovery struct {
 	tempQueue     *util.UniqueQueue
 	ctx           context.Context
 	cancel        context.CancelFunc
+	wg            *sync.WaitGroup
 }
 
 func NewMdnsDiscovery(serviceName string) Discovery {
@@ -61,6 +63,8 @@ func (k *mdnsDiscovery) discovery() {
 		log.Fatalln("Failed to initialize mDNS resolver:", err.Error())
 	}
 	entries := make(chan *zeroconf.ServiceEntry)
+	k.wg = &sync.WaitGroup{}
+	k.wg.Add(1)
 	go k.receive(entries)
 
 	if err = resolver.Browse(k.ctx, k.serviceName, "local.", entries); err != nil {
@@ -69,6 +73,7 @@ func (k *mdnsDiscovery) discovery() {
 }
 
 func (k *mdnsDiscovery) receive(entries chan *zeroconf.ServiceEntry) {
+	defer k.wg.Done()
 	for {
 		select {
 		case <-k.ctx.Done():
@@ -87,5 +92,6 @@ func (k *mdnsDiscovery) receive(entries chan *zeroconf.ServiceEntry) {
 
 func (k *mdnsDiscovery) Stop() {
 	k.cancel()
+	k.wg.Wait()
 	k.mdnsServer.Shutdown()
 }

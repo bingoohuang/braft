@@ -1,21 +1,24 @@
 package braft
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/hashicorp/go-hclog"
+	"github.com/vmihailenco/msgpack/v5"
 	"io"
 	"log"
+	"math/rand"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc/reflection"
-
-	"github.com/hashicorp/go-hclog"
-	"github.com/vmihailenco/msgpack/v5"
 
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -54,17 +57,26 @@ type Node struct {
 	distributor *fsm.Distributor
 	raftLogSum  *uint64
 
-	addrQueue *util.UniqueQueue
+	addrQueue  *util.UniqueQueue
+	notifyCh   chan NotifyEvent
+	wg         *sync.WaitGroup
+	ctx        context.Context
+	cancelFunc context.CancelFunc
+
+	httpServer *http.Server
+	fns        []ConfigFn
 }
 
 // Config is the configuration of the node.
 type Config struct {
-	TypeRegister *marshal.TypeRegister
-	DataDir      string
-	Discovery    discovery.Discovery
-	Services     []fsm.Service
-	LeaderChange LeaderChanger
-	BizData      func() interface{}
+	TypeRegister  *marshal.TypeRegister
+	DataDir       string
+	Discovery     discovery.Discovery
+	Services      []fsm.Service
+	LeaderChange  NodeStateChanger
+	BizData       func() interface{}
+	HTTPConfigFns []HTTPConfigFn
+	EnableHTTP    bool
 }
 
 // RaftID is the structure of node ID.
@@ -157,11 +169,31 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 		distributor:      fsm.NewDistributor(),
 		raftLogSum:       &sm.RaftLogSum,
 		addrQueue:        util.NewUniqueQueue(100),
+		notifyCh:         make(chan NotifyEvent, 100),
+		fns:              fns,
 	}, nil
 }
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
 func (n *Node) Start() (err error) {
+	n1 := n
+	for {
+		if err := n1.start(); err != nil {
+			return err
+		}
+
+		n1.wait()
+
+		if n1, err = NewNode(n1.fns...); err != nil {
+			log.Printf("restart failed: %v", err)
+			return err
+		}
+
+		log.Printf("restart sucessfully")
+	}
+}
+
+func (n *Node) start() (err error) {
 	n.StartTime = time.Now()
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, n.DiscoveryName())
 
@@ -202,27 +234,44 @@ func (n *Node) Start() (err error) {
 
 	logfmt.RegisterLevelKey("[DEBUG]", logrus.DebugLevel)
 
+	n.wg = &sync.WaitGroup{}
+
 	// discovery method
 	discoveryChan, err := n.Conf.Discovery.Start(n.ID, EnvRport)
 	if err != nil {
 		return err
 	}
-	go n.handleDiscoveredNodes(discoveryChan)
+
+	n.ctx, n.cancelFunc = context.WithCancel(context.Background())
+
+	n.goHandleDiscoveredNodes(discoveryChan)
 
 	// serve grpc
-	go func() {
+	Go(n.wg, func() {
 		if err := n.GrpcServer.Serve(grpcListen); err != nil {
-			log.Fatal(err)
+			log.Printf("E! GrpcServer failed: %v", err)
 		}
-	}()
+	})
 
 	if n.Conf.LeaderChange != nil {
-		go func() {
-			for becameLeader := range n.Raft.LeaderCh() {
-				log.Printf("becameLeader: %v", becameLeader)
-				n.Conf.LeaderChange(becameLeader)
+		d := util.EnvDuration("BRAFT_LEADER_STEADY", 60*time.Second)
+		delayLeaderChanger := util.NewDelayWorker(n.wg, n.ctx, d, func(state NodeState, t time.Time) {
+			n.Conf.LeaderChange(n, state)
+		})
+		GoFor(n.wg, n.ctx, n.Raft.LeaderCh(), func(becameLeader bool) error {
+			log.Printf("becameLeader: %v", becameLeader)
+			if becameLeader {
+				delayLeaderChanger.Notify(NodeLeader)
+			} else {
+				delayLeaderChanger.Notify(NodeFollower)
 			}
-		}()
+			return nil
+		})
+	}
+
+	n.goDealNotifyEvent()
+	if n.Conf.EnableHTTP {
+		n.runHTTP(n.Conf.HTTPConfigFns...)
 	}
 
 	log.Printf("Node started")
@@ -240,21 +289,34 @@ func (n *Node) Stop() {
 	}
 
 	log.Print("Stopping Node...")
-	n.Conf.Discovery.Stop()
-	if err := n.mList.Leave(10 * time.Second); err != nil {
-		log.Printf("Failed to leave from discovery: %q", err.Error())
+	n.cancelFunc()
+
+	if n.Conf.LeaderChange != nil {
+		n.Conf.LeaderChange(n, NodeShuttingDown)
 	}
+
+	n.Conf.Discovery.Stop()
+	//if err := n.mList.Leave(10 * time.Second); err != nil {
+	//	log.Printf("Failed to leave from discovery: %q", err.Error())
+	//}
 	if err := n.mList.Shutdown(); err != nil {
-		log.Printf("Failed to shutdown discovery: %q", err.Error())
+		log.Printf("E! shutdown discovery failed: %v", err)
 	}
 	log.Print("Discovery stopped")
 	if err := n.Raft.Shutdown().Error(); err != nil {
-		log.Printf("Failed to shutdown Raft: %q", err.Error())
+		log.Printf("E! shutdown Raft failed: %v", err)
 	}
 	log.Print("Raft stopped")
-	n.GrpcServer.GracefulStop()
+	n.GrpcServer.Stop()
 	log.Print("GrpcServer Server stopped")
-	log.Print("Node Stopped!")
+
+	if n.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := n.httpServer.Shutdown(ctx); err != nil {
+			log.Printf("E! server Shutdown failed: %v", err)
+		}
+	}
 }
 
 func (n *Node) findServer(serverID string) bool {
@@ -266,57 +328,215 @@ func (n *Node) findServer(serverID string) bool {
 	return false
 }
 
-// handleDiscoveredNodes handles the discovered Node additions
-func (n *Node) handleDiscoveredNodes(discoveryChan chan string) {
-	for peer := range discoveryChan {
+// goHandleDiscoveredNodes handles the discovered Node additions
+func (n *Node) goHandleDiscoveredNodes(discoveryChan chan string) {
+	GoFor(n.wg, n.ctx, discoveryChan, func(peer string) error {
 		peerHost, port := util.Cut(peer, ":")
 		if port == "" {
 			peer = fmt.Sprintf("%s:%d", peerHost, EnvRport)
 		}
+		rsp, err := GetPeerDetails(peer, 3*time.Second)
+		if err != nil {
+			log.Printf("E! GetPeerDetails %q failed: %v", peer, err)
+			return nil
+		}
 
-		if rsp, err := GetPeerDetails(peer, 3*time.Second); err == nil {
-			if n.findServer(rsp.ServerId) {
-				continue
-			}
+		if n.findServer(rsp.ServerId) {
+			return nil
+		}
 
-			peerAddr := fmt.Sprintf("%s:%d", peerHost, rsp.DiscoveryPort)
-			log.Printf("join to cluster using discovery address: %s", peerAddr)
-			if _, err = n.mList.Join([]string{peerAddr}); err != nil {
-				log.Printf("W! failed to join to cluster using discovery address: %s", peerAddr)
+		peerAddr := fmt.Sprintf("%s:%d", peerHost, rsp.DiscoveryPort)
+		log.Printf("join to cluster using discovery address: %s", peerAddr)
+		if _, err = n.mList.Join([]string{peerAddr}); err != nil {
+			log.Printf("W! failed to join to cluster using discovery address: %s", peerAddr)
+		}
+
+		return nil
+	})
+}
+
+type NotifyType int
+
+const (
+	_ NotifyType = iota
+	NotifyJoin
+	NotifyLeave
+	NotifyUpdate
+)
+
+func (t NotifyType) String() string {
+	switch t {
+	case NotifyJoin:
+		return "NotifyJoin"
+	case NotifyLeave:
+		return "NotifyLeave"
+	case NotifyUpdate:
+		return "NotifyUpdate"
+	default:
+		return "Unknown"
+	}
+}
+
+type NotifyEvent struct {
+	NotifyType
+	*memberlist.Node
+}
+
+// Sleep is used to give the server time to unsubscribe the client and reset the stream
+func Sleep(d time.Duration) {
+	time.Sleep(d + time.Duration(rand.Int()%1000)*time.Microsecond)
+}
+
+func Go(wg *sync.WaitGroup, f func()) {
+	if wg != nil {
+		wg.Add(1)
+	}
+
+	go func() {
+		if wg != nil {
+			defer wg.Done()
+		}
+
+		f()
+	}()
+}
+
+func GoFor[T any](wg *sync.WaitGroup, ctx context.Context, ch <-chan T, f func(elem T) error) {
+	if wg != nil {
+		wg.Add(1)
+	}
+
+	go func() {
+		if wg != nil {
+			defer wg.Done()
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case elem, ok := <-ch:
+				if !ok { // closed
+					return
+				}
+				if err := f(elem); err != nil {
+					if err == io.EOF {
+						return
+					}
+					log.Printf("E GoFor invoke fn failed: %v", err)
+				}
 			}
 		}
+	}()
+
+}
+
+func (n *Node) goDealNotifyEvent() {
+	waitLeader := make(chan NotifyEvent, 100)
+
+	GoFor(n.wg, n.ctx, n.notifyCh, func(e NotifyEvent) error {
+		n.processNotify(e, waitLeader)
+		return nil
+	})
+
+	waitLeaderTime := util.EnvDuration("BRAFT_RESTART_MIN", 90*time.Second)
+
+	GoFor(n.wg, n.ctx, waitLeader, func(e NotifyEvent) error {
+		leaderAddr, leaderID, err := n.waitLeader(waitLeaderTime)
+		if err != nil {
+			return err
+		}
+
+		isLeader := n.IsLeader()
+		log.Printf("leader waited, type: %s, leader: %s, leaderID: %s, isLeader: %t, node: %s",
+			e.NotifyType, leaderAddr, leaderID, isLeader, codec.Json(e.Node))
+		n.processNotifyAtLeader(isLeader, e)
+		return nil
+	})
+}
+
+func (n *Node) waitLeader(minWait time.Duration) (leaderAddr, leaderID string, err error) {
+	start := time.Now()
+	for {
+		if addr, id := n.Raft.LeaderWithID(); addr != "" {
+			return string(addr), string(id), nil
+		}
+		if time.Since(start) >= minWait {
+			n.Stop()
+			return "", "", io.EOF
+		}
+
+		log.Printf("sleeping 1s to wait for leader")
+		Sleep(1 * time.Second)
+	}
+}
+
+func (n *Node) processNotify(e NotifyEvent, waitLeader chan NotifyEvent) {
+	leader, _ := n.Raft.LeaderWithID() // return empty string if there is no current leader
+	isLeader := n.IsLeader()
+	log.Printf("received type: %s, leader: %s, isLeader: %t, node: %s",
+		e.NotifyType, leader, isLeader, codec.Json(e.Node))
+	if leader != "" {
+		n.processNotifyAtLeader(isLeader, e)
+	} else {
+		select {
+		case waitLeader <- e:
+			log.Printf("current no leader, to wait list, type: %s, leader: %s, isLeader: %t, node: %s",
+				e.NotifyType, leader, isLeader, codec.Json(e.Node))
+		default:
+			log.Printf("too many waitLeaders")
+		}
+	}
+}
+
+func (n *Node) processNotifyAtLeader(isLeader bool, e NotifyEvent) {
+	leader, _ := n.Raft.LeaderWithID()
+	log.Printf("processing type: %s, leader: %s, isLeader: %t, node: %s",
+		e.NotifyType, leader, isLeader, codec.Json(e.Node))
+
+	switch e.NotifyType {
+	case NotifyJoin:
+		n.join(e.Node)
+	case NotifyLeave:
+		n.leave(e.Node)
+	}
+}
+
+func (n *Node) leave(node *memberlist.Node) {
+	nodeID, _ := util.Cut(node.Name, ":")
+	if r := n.Raft.RemoveServer(raft.ServerID(nodeID), 0, 0); r.Error() != nil {
+		log.Printf("raft node left: %s, addr: %s error: %v", node.Name, node.Addr, r.Error())
+	} else {
+		log.Printf("raft node left: %s, addr: %s sucessfully", node.Name, node.Addr)
+	}
+}
+
+func (n *Node) join(node *memberlist.Node) {
+	nodeID, nodePort := util.Cut(node.Name, ":")
+	nodeAddr := fmt.Sprintf("%s:%s", node.Addr, nodePort)
+	if r := n.Raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(nodeAddr), 0, 0); r.Error() != nil {
+		log.Printf("raft node joined: %s, addr: %s error: %v", node.Name, nodeAddr, r.Error())
+	} else {
+		log.Printf("raft node joined: %s, addr: %s sucessfully", node.Name, nodeAddr)
 	}
 }
 
 // NotifyJoin triggered when a new Node has been joined to the cluster (discovery only)
 // and capable of joining the Node to the raft cluster
 func (n *Node) NotifyJoin(node *memberlist.Node) {
-	if n.IsLeader() {
-		nodeID, nodePort := util.Cut(node.Name, ":")
-		nodeAddr := fmt.Sprintf("%s:%s", node.Addr, nodePort)
-		if r := n.Raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(nodeAddr), 0, 0); r.Error() != nil {
-			log.Printf("raft node joined: %s, addr: %s error: %v", node.Name, nodeAddr, r.Error())
-		} else {
-			log.Printf("raft node joined: %s, addr: %s sucessfully", node.Name, nodeAddr)
-		}
-	}
+	n.notifyCh <- NotifyEvent{NotifyType: NotifyJoin, Node: node}
 }
 
 // NotifyLeave triggered when a Node becomes unavailable after a period of time
 // it will remove the unavailable Node from the Raft cluster
 func (n *Node) NotifyLeave(node *memberlist.Node) {
-	if n.IsLeader() {
-		nodeID, _ := util.Cut(node.Name, ":")
-		if r := n.Raft.RemoveServer(raft.ServerID(nodeID), 0, 0); r.Error() != nil {
-			log.Printf("raft node left: %s, addr: %s error: %v", node.Name, node.Addr, r.Error())
-		} else {
-			log.Printf("raft node left: %s, addr: %s sucessfully", node.Name, node.Addr)
-		}
-	}
+	n.notifyCh <- NotifyEvent{NotifyType: NotifyLeave, Node: node}
 }
 
 // NotifyUpdate responses the update of raft cluster member.
-func (n *Node) NotifyUpdate(_ *memberlist.Node) {}
+func (n *Node) NotifyUpdate(node *memberlist.Node) {
+	n.notifyCh <- NotifyEvent{NotifyType: NotifyUpdate, Node: node}
+}
 
 // IsLeader tells whether the current node is the leader.
 func (n *Node) IsLeader() bool { return n.Raft.VerifyLeader().Error() == nil }
@@ -374,6 +594,11 @@ func (n *Node) Distribute(bean fsm.Distributable) (interface{}, error) {
 
 	log.Printf("distribute %d items: %s", dataLen, codec.Json(bean))
 	return n.RaftApply(fsm.DistributeRequest{Data: bean}, time.Second)
+}
+
+func (n *Node) wait() {
+	n.wg.Wait()
+	log.Print("Node Stopped!")
 }
 
 // logger adapters logger to LevelLogger.
