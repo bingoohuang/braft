@@ -89,9 +89,18 @@ type RaftID struct {
 
 // NewNode returns an BRaft node.
 func NewNode(fns ...ConfigFn) (*Node, error) {
-	conf, err := createConfig(fns)
-	if err != nil {
+	node := &Node{fns: fns}
+	if err := node.createNode(); err != nil {
 		return nil, err
+	}
+
+	return node, nil
+}
+
+func (n *Node) createNode() error {
+	conf, err := createConfig(n.fns)
+	if err != nil {
+		return err
 	}
 
 	log.Printf("node data dir: %s", conf.DataDir)
@@ -120,19 +129,19 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	stableStoreFile := filepath.Join(conf.DataDir, "store.boltdb")
 	if util.FileExists(stableStoreFile) {
 		if err := os.Remove(stableStoreFile); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	// StableStore 稳定存储,存储Raft集群的节点信息
 	stableStore, err := raftboltdb.NewBoltStore(stableStoreFile)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// LogStore 存储Raft的日志
 	logStore, err := raft.NewLogCache(512, stableStore)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// SnapshotStore 快照存储,存储节点的快照信息
@@ -155,36 +164,34 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	// raft server
 	raftServer, err := raft.NewRaft(raftConf, sm, logStore, stableStore, snapshotStore, t.Transport())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Node{
-		ID:               nodeID,
-		RaftID:           raftID,
-		addr:             fmt.Sprintf(":%d", EnvRport),
-		Raft:             raftServer,
-		TransportManager: t,
-		Conf:             conf,
-		memberConfig:     memberConfig,
-		distributor:      fsm.NewDistributor(),
-		raftLogSum:       &sm.RaftLogSum,
-		addrQueue:        util.NewUniqueQueue(100),
-		notifyCh:         make(chan NotifyEvent, 100),
-		fns:              fns,
-	}, nil
+	n.ID = nodeID
+	n.RaftID = raftID
+	n.addr = fmt.Sprintf(":%d", EnvRport)
+	n.Raft = raftServer
+	n.TransportManager = t
+	n.Conf = conf
+	n.memberConfig = memberConfig
+	n.distributor = fsm.NewDistributor()
+	n.raftLogSum = &sm.RaftLogSum
+	n.addrQueue = util.NewUniqueQueue(100)
+	n.notifyCh = make(chan NotifyEvent, 100)
+
+	return nil
 }
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
 func (n *Node) Start() (err error) {
-	n1 := n
 	for {
-		if err := n1.start(); err != nil {
+		if err := n.start(); err != nil {
 			return err
 		}
 
-		n1.wait()
+		n.wait()
 
-		if n1, err = NewNode(n1.fns...); err != nil {
+		if err = n.createNode(); err != nil {
 			log.Printf("restart failed: %v", err)
 			return err
 		}
