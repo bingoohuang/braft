@@ -2,13 +2,14 @@ package util
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 
 	"github.com/bingoohuang/gg/pkg/thinktime"
 )

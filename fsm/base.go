@@ -9,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/bingoohuang/braft/typer"
+
 	"github.com/bingoohuang/braft/marshal"
 	"github.com/hashicorp/raft"
 )
@@ -51,10 +53,9 @@ func (i *FSM) Apply(raftlog *raft.Log) interface{} {
 		// routing request to service
 		if target, err := getTargetTypeInfo(i.reqDataTypes, payload); err == nil {
 			return target.Service.NewLog(i.shortNodeID, payload)
-		} else {
-			log.Printf("E! unknown request data type, error: %v", err)
 		}
 
+		log.Printf("E! unknown request data type, data: %s, error: %v", raftlog.Data, err)
 		return errors.New("unknown request data type")
 	}
 
@@ -99,17 +100,29 @@ func MakeReqTypeInfo(service Service) ReqTypeInfo {
 	// get current type fields list
 	t := reflect.TypeOf(service.GetReqDataType())
 
-	return ReqTypeInfo{
-		Service: service,
-		ReqType: t,
-	}
+	return ReqTypeInfo{Service: service, ReqType: t}
 }
 
 func getTargetTypeInfo(types []ReqTypeInfo, result interface{}) (ReqTypeInfo, error) {
 	resultType := reflect.TypeOf(result)
+	var typs []ReqTypeInfo
 	for _, typ := range types {
 		if typ.ReqType == resultType {
-			return typ, nil
+			typs = append(typs, typ)
+		}
+	}
+
+	if len(typs) == 1 {
+		return typs[0], nil
+	}
+
+	for _, typ := range typs {
+		if dt, ok1 := typer.ConvertibleTo(typ.Service, SubDataTypeAwareType); ok1 {
+			if da, ok2 := typer.ConvertibleTo(result, SubDataAwareType); ok2 {
+				if _, ok3 := typer.ConvertibleTo(da.(SubDataAware).GetSubData(), dt.(SubDataTypeAware).GetSubDataType()); ok3 {
+					return typ, nil
+				}
+			}
 		}
 	}
 

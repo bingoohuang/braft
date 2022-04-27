@@ -169,6 +169,7 @@ type DistributeRequest struct {
 var _ marshal.TypeRegisterMarshalerAdapter = (*DistributeRequest)(nil)
 
 func (s DistributeRequest) Marshal(t *marshal.TypeRegister) ([]byte, error) { return t.Marshal(s.Data) }
+func (s DistributeRequest) GetSubData() interface{}                         { return s.Data }
 func (s *DistributeRequest) Unmarshal(t *marshal.TypeRegister, d []byte) (err error) {
 	s.Data, err = t.Unmarshal(d)
 	return

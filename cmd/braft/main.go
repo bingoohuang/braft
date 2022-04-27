@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/bingoohuang/braft/ticker"
 	"log"
 	"net/http"
 	"os"
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/bingoohuang/braft/ticker"
 
 	"github.com/bingoohuang/braft/marshal"
 	"github.com/bingoohuang/gg/pkg/flagparse"
@@ -48,7 +49,6 @@ func main() {
 			braft.WithHandler(http.MethodPost, "/distribute", dh.distributePost),
 			braft.WithHandler(http.MethodGet, "/distribute", dh.distributeGet),
 		))
-
 	if err != nil {
 		log.Fatalf("failed to new node, error: %v", err)
 	}

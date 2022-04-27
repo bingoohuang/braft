@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/go-hclog"
-	"github.com/vmihailenco/msgpack/v5"
 	"io"
 	"log"
 	"math/rand"
@@ -17,6 +15,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/vmihailenco/msgpack/v5"
 
 	"google.golang.org/grpc/reflection"
 
@@ -435,7 +436,6 @@ func GoFor[T any](wg *sync.WaitGroup, ctx context.Context, ch <-chan T, f func(e
 			}
 		}
 	}()
-
 }
 
 func (n *Node) goDealNotifyEvent() {

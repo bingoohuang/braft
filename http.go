@@ -80,7 +80,6 @@ func (n *Node) runHTTP(fs ...HTTPConfigFn) {
 			log.Printf("E! listen: %s\n", err)
 		}
 	}()
-
 }
 
 func getQuery(ctx *gin.Context, k ...string) string {

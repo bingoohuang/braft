@@ -1,6 +1,23 @@
 package fsm
 
-import "github.com/bingoohuang/braft/marshal"
+import (
+	"reflect"
+
+	"github.com/bingoohuang/braft/marshal"
+)
+
+type SubDataTypeAware interface {
+	GetSubDataType() reflect.Type
+}
+
+type SubDataAware interface {
+	GetSubData() interface{}
+}
+
+var (
+	SubDataTypeAwareType = reflect.TypeOf((*SubDataTypeAware)(nil)).Elem()
+	SubDataAwareType     = reflect.TypeOf((*SubDataAware)(nil)).Elem()
+)
 
 // Service interface makes it easier to build State Machines
 type Service interface {
