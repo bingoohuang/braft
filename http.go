@@ -161,12 +161,7 @@ func (n *Node) GetRaftNodesInfo() (nodes []RaftNode) {
 			GoVersion:  v.GoVersion,
 			AppVersion: v.AppVersion,
 
-			BizData: func() json.RawMessage {
-				if rsp.BizData == "" {
-					return nil
-				}
-				return json.RawMessage(rsp.BizData)
-			}(),
+			BizData: json.RawMessage(rsp.BizData),
 
 			Addr: rsp.Addr,
 		})
