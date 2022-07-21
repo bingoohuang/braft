@@ -626,7 +626,19 @@ func (l *logger) Log(level hclog.Level, msg string, args ...interface{}) {
 		v[0] = "E!"
 	}
 
-	log.Print(v...)
+	log.Print(logPrint(v))
+}
+
+func logPrint(a []any) string {
+	var buf []byte
+	for i, arg := range a {
+		if i > 0 { // Add a space
+			buf = append(buf, ' ')
+		}
+		buf = append(buf, []byte(fmt.Sprint(arg))...)
+	}
+
+	return string(buf)
 }
 
 func (l *logger) Trace(msg string, args ...interface{}) { l.Log(hclog.Trace, msg, args...) }
