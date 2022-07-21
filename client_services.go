@@ -49,10 +49,12 @@ func (s *ClientGrpcServices) GetDetails(c context.Context, r *proto.GetDetailsRe
 		s.Node.addrQueue.Put(r.Addr)
 	}
 
+	leaderAddr, leaderID := s.Node.Raft.LeaderWithID()
 	return &proto.GetDetailsResponse{
 		ServerId:       s.Node.ID,
 		RaftState:      s.Node.Raft.State().String(),
-		Leader:         string(s.Node.Raft.Leader()),
+		Leader:         string(leaderAddr),
+		LeaderID:       string(leaderID),
 		DiscoveryPort:  int32(EnvDport),
 		HttpPort:       int32(EnvHport),
 		RaftPort:       int32(EnvRport),

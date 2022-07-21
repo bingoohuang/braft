@@ -328,7 +328,7 @@ func (n *Node) Stop() {
 }
 
 func (n *Node) findServer(serverID string) bool {
-	for _, s := range n.Raft.GetConfiguration().Configuration().Servers {
+	for _, s := range n.GetRaftServers() {
 		if string(s.ID) == serverID {
 			return true
 		}
@@ -576,7 +576,7 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 
 // ShortNodeIds returns a sorted list of short node IDs of the current raft cluster.
 func (n *Node) ShortNodeIds() (nodeIds []string) {
-	for _, server := range n.Raft.GetConfiguration().Configuration().Servers {
+	for _, server := range n.GetRaftServers() {
 		rid := ParseRaftID(string(server.ID))
 		nodeIds = append(nodeIds, rid.ID)
 	}

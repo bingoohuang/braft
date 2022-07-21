@@ -98,13 +98,11 @@ github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kB
 github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205 h1:CqebDU62sTEOLJ+wOQ4BbeeVcroNv8+WgnVhyuGQnhI=
 github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205/go.mod h1:tltYEITxWTTXTTAqJNBK62x6Eg1iThhAnez8CxcQxQo=
 github.com/bingoohuang/golog v0.0.0-20211112131923-101b7e1b3d4c/go.mod h1:atiVUeYe0Rsi80P0eDEF8lpf9qvt/w/qpil8PpNGYvw=
-github.com/bingoohuang/golog v0.0.0-20220419071623-16dcc2aaef54 h1:AzdMEtYkSCx+QqoFK2O1OV1mCY64VZi4GVdCAEW/s0Q=
-github.com/bingoohuang/golog v0.0.0-20220419071623-16dcc2aaef54/go.mod h1:eG/trxk0nks1UTikeTcuupJury4OzyzF+iQ13KNrQH0=
+github.com/bingoohuang/golog v0.0.0-20220623083314-7941382e4e22 h1:WJeP425WQIM2Of7UPnpRwBLcwr8Aw+CDbcIJXzWidec=
+github.com/bingoohuang/golog v0.0.0-20220623083314-7941382e4e22/go.mod h1:vwkm7iW13wvcovrfsfZxZ/mKj6wfyigvJQXEMQNuXHI=
 github.com/bingoohuang/sariaf v0.0.0-20201222043148-21fd9703b115/go.mod h1:DSi1LVR76Ap189KzzA40C8pFSpRZHsy/n+kgK8ihfhs=
 github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
-github.com/bwmarrin/snowflake v0.3.0 h1:xm67bEhkKh6ij1790JB83OujPR5CzNe8QuQqAgISZN0=
-github.com/bwmarrin/snowflake v0.3.0/go.mod h1:NdZxfVWX+oR6y2K0o6qAYv6gIOP9rjG0/E9WsDpxqwE=
 github.com/casbin/casbin/v2 v2.1.2/go.mod h1:YcPU1XXisHhLzuxH9coDNf2FbKpjGlbCg3n9yuLkIJQ=
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=
 github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=

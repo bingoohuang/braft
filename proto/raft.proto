@@ -28,6 +28,7 @@ message GetDetailsResponse {
   float pcpu = 14;
   string bizData = 15;
   repeated string addr = 16;
+  string leaderID = 17;
 }
 
 message ApplyRequest {

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/raft"
+
 	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/gg/pkg/fn"
@@ -121,19 +123,29 @@ type RaftNode struct {
 
 // ServeRaft services the raft http api.
 func (n *Node) ServeRaft(ctx *gin.Context) {
-	nodes := n.GetRaftNodesInfo()
+	raftServers := n.GetRaftServers()
+	nodes := n.GetRaftNodes(raftServers)
+	leaderAddr, leaderID := n.Raft.LeaderWithID()
 	ctx.JSON(http.StatusOK, gin.H{
-		"Leader":        n.Raft.Leader(),
+		"Leader":        leaderAddr,
+		"LeaderID":      leaderID,
 		"Nodes":         nodes,
 		"NodeNum":       len(nodes),
 		"Discovery":     n.DiscoveryName(),
 		"CurrentLeader": n.IsLeader(),
+		"RaftServers":   raftServers,
 	})
 }
 
 // GetRaftNodesInfo return the raft nodes information.
 func (n *Node) GetRaftNodesInfo() (nodes []RaftNode) {
-	for _, server := range n.Raft.GetConfiguration().Configuration().Servers {
+	raftServers := n.GetRaftServers()
+	return n.GetRaftNodes(raftServers)
+}
+
+// GetRaftNodes return the raft nodes information.
+func (n *Node) GetRaftNodes(raftServers []raft.Server) (nodes []RaftNode) {
+	for _, server := range raftServers {
 		rsp, err := GetPeerDetails(string(server.Address), 3*time.Second)
 		if err != nil {
 			log.Printf("E! GetPeerDetails error: %v", err)
@@ -172,6 +184,10 @@ func (n *Node) GetRaftNodesInfo() (nodes []RaftNode) {
 		})
 	}
 	return
+}
+
+func (n *Node) GetRaftServers() []raft.Server {
+	return n.Raft.GetConfiguration().Configuration().Servers
 }
 
 // RegisterServeKV register kv service for the gin route.

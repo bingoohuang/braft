@@ -53,8 +53,8 @@ func main() {
 }
 ```
 
-1. use mDNS discovery: `GOLOG_STDOUT=true braft` on multiple nodes.
-1. use static discovery: `GOLOG_STDOUT=true BRAFT_DISCOVERY="192.168.126.16,192.168.126.18,192.168.126.182" braft`  on
+1. use mDNS discovery: `braft` on multiple nodes.
+1. use static discovery: `BRAFT_DISCOVERY="192.168.126.16,192.168.126.18,192.168.126.182" braft`  on
    multiple nodes.
 
 ## env VARIABLES
@@ -84,23 +84,23 @@ func main() {
 
 At localhost:
 
-1. `BRAFT_RESTART_MIN=10s BRAFT_LEADER_STEADY=10s GOLOG_STDOUT=true BRAFT_RPORT=15000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
-2. `BRAFT_RESTART_MIN=10s BRAFT_LEADER_STEADY=10s GOLOG_STDOUT=true BRAFT_RPORT=16000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
-3. `BRAFT_RESTART_MIN=10s BRAFT_LEADER_STEADY=10s GOLOG_STDOUT=true BRAFT_RPORT=17000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
+1. `BRAFT_RESTART_MIN=10s BRAFT_LEADER_STEADY=10s BRAFT_RPORT=15000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
+2. `BRAFT_RESTART_MIN=10s BRAFT_LEADER_STEADY=10s BRAFT_RPORT=16000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
+3. `BRAFT_RESTART_MIN=10s BRAFT_LEADER_STEADY=10s BRAFT_RPORT=17000 BRAFT_DISCOVERY="127.0.0.1:15000,127.0.0.1:16000,127.0.0.1:17000" braft`
 
 At 3-different hosts:
 
-1. `GOLOG_STDOUT=true BRAFT_RPORT=15000 BRAFT_DISCOVERY="host1,host2,host3" braft`
+1. `BRAFT_RPORT=15000 BRAFT_DISCOVERY="host1,host2,host3" braft`
 
 ### use mDNS discovery
 
-1. `GOLOG_STDOUT=true braft`
-2. `GOLOG_STDOUT=true braft` (same)
-3. `GOLOG_STDOUT=true braft` (same)
+1. `braft`
+2. `braft` (same)
+3. `braft` (same)
 
 ### use k8s discovery
 
-1. `GOLOG_STDOUT=true K8S_SLEEP=50-80s K8N=footstone BDI=k8s K8L=svc=braft ./braft`
+1. `K8S_SLEEP=50-80s K8N=footstone BDI=k8s K8L=svc=braft ./braft`
 
 ### example /raft http rest api result
 

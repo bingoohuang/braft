@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Jille/raft-grpc-transport v1.2.0
 	github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205
-	github.com/bingoohuang/golog v0.0.0-20220419071623-16dcc2aaef54
+	github.com/bingoohuang/golog v0.0.0-20220623083314-7941382e4e22
 	github.com/gin-gonic/gin v1.7.7
 	github.com/grandcat/zeroconf v1.0.1-0.20210929195321-a393c0e41e54
 	github.com/hashicorp/go-hclog v1.2.0
@@ -29,7 +29,6 @@ require (
 require (
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
-	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
