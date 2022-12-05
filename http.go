@@ -8,16 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/raft"
-
-	"github.com/bingoohuang/gg/pkg/ss"
-
-	"github.com/bingoohuang/gg/pkg/fn"
-
 	"github.com/bingoohuang/braft/fsm"
+	"github.com/bingoohuang/gg/pkg/fn"
+	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/gg/pkg/v"
 	"github.com/bingoohuang/golog/pkg/ginlogrus"
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/raft"
 )
 
 // HTTPConfig is configuration for HTTP service.

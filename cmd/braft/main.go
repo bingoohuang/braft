@@ -9,19 +9,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bingoohuang/braft/ticker"
-
-	"github.com/bingoohuang/braft/marshal"
-	"github.com/bingoohuang/gg/pkg/flagparse"
-	"github.com/bingoohuang/golog"
-
-	"github.com/bingoohuang/gg/pkg/sigx"
-
 	"github.com/bingoohuang/braft"
 	"github.com/bingoohuang/braft/fsm"
+	"github.com/bingoohuang/braft/marshal"
+	"github.com/bingoohuang/braft/ticker"
 	"github.com/bingoohuang/gg/pkg/codec"
+	"github.com/bingoohuang/gg/pkg/flagparse"
 	"github.com/bingoohuang/gg/pkg/randx"
+	"github.com/bingoohuang/gg/pkg/sigx"
 	"github.com/bingoohuang/gg/pkg/v"
+	"github.com/bingoohuang/golog"
 	"github.com/gin-gonic/gin"
 	"github.com/segmentio/ksuid"
 	"github.com/thoas/go-funk"

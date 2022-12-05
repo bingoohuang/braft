@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/viper"
-
 	"github.com/bingoohuang/gg/pkg/thinktime"
+	"github.com/spf13/viper"
 )
 
 // ErrorString returns the error string, err can be nil.

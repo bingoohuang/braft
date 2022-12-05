@@ -8,13 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bingoohuang/braft/util"
-
-	"github.com/bingoohuang/gg/pkg/jsoni"
-
 	"github.com/bingoohuang/braft/pidusage"
-
 	"github.com/bingoohuang/braft/proto"
+	"github.com/bingoohuang/braft/util"
+	"github.com/bingoohuang/gg/pkg/jsoni"
 )
 
 // NewClientGrpcService creates a new ClientGrpcService.

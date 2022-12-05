@@ -9,6 +9,7 @@ require (
 	github.com/gin-gonic/gin v1.7.7
 	github.com/grandcat/zeroconf v1.0.1-0.20210929195321-a393c0e41e54
 	github.com/hashicorp/go-hclog v1.2.0
+	github.com/hashicorp/go-sockaddr v1.0.0
 	github.com/hashicorp/memberlist v0.3.1
 	github.com/hashicorp/raft v1.3.7
 	github.com/hashicorp/raft-boltdb v0.0.0-20220329195025-15018e9b97e0
@@ -48,7 +49,6 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-msgpack v1.1.5 // indirect
 	github.com/hashicorp/go-multierror v1.0.0 // indirect
-	github.com/hashicorp/go-sockaddr v1.0.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

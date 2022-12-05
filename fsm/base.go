@@ -9,9 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/bingoohuang/braft/typer"
-
 	"github.com/bingoohuang/braft/marshal"
+	"github.com/bingoohuang/braft/typer"
 	"github.com/hashicorp/raft"
 )
 

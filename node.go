@@ -16,13 +16,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/vmihailenco/msgpack/v5"
-
-	"google.golang.org/grpc/reflection"
-
-	"google.golang.org/grpc/credentials/insecure"
-
 	transport "github.com/Jille/raft-grpc-transport"
 	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/fsm"
@@ -33,12 +26,17 @@ import (
 	"github.com/bingoohuang/gg/pkg/goip"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/golog/pkg/logfmt"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
+	"github.com/vmihailenco/msgpack/v5"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 )
 
 // Node is the raft cluster node.
@@ -152,6 +150,14 @@ func (n *Node) createNode() error {
 	sm := fsm.NewRoutingFSM(raftID.ID, conf.Services, conf.TypeRegister)
 
 	memberConfig := memberlist.DefaultLocalConfig()
+
+	if privateIP, _ := sockaddr.GetPrivateIP(); privateIP == "" {
+		if allIPv4, _ := goip.ListAllIPv4(); len(allIPv4) > 0 {
+			memberConfig.AdvertiseAddr = allIPv4[0]
+			memberConfig.AdvertisePort = EnvDport
+		}
+	}
+
 	memberConfig.BindPort = EnvDport
 	memberConfig.Name = fmt.Sprintf("%s:%d", nodeID, EnvRport)
 	memberConfig.Logger = log.Default()

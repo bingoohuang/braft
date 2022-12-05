@@ -7,17 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/multierr"
-
-	"github.com/bingoohuang/gg/pkg/ss"
-
-	"google.golang.org/grpc/credentials/insecure"
-
 	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/proto"
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/goip"
+	"github.com/bingoohuang/gg/pkg/ss"
+	"go.uber.org/multierr"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // ApplyOnLeader apply a payload on the leader node.
