@@ -18,15 +18,15 @@ type Marshaler interface {
 }
 
 type Data struct {
-	Payload []byte
 	Type    string
+	Payload []byte
 	IsPtr   bool
 }
 
 type TypeRegister struct {
-	lock    handy.Lock
-	TypeMap map[string]reflect.Type
 	Marshaler
+	TypeMap map[string]reflect.Type
+	lock    handy.Lock
 }
 
 func NewTypeRegister(m Marshaler) *TypeRegister {

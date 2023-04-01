@@ -3,8 +3,8 @@ package discovery
 import "strings"
 
 type staticDiscovery struct {
-	Peers         []string
 	discoveryChan chan string
+	Peers         []string
 }
 
 func NewStaticDiscovery(peers []string) Discovery {

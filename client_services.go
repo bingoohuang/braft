@@ -21,8 +21,8 @@ func NewClientGrpcService(node *Node) *ClientGrpcServices {
 
 // ClientGrpcServices is the client of grpc services.
 type ClientGrpcServices struct {
-	Node *Node
 	proto.UnimplementedRaftServer
+	Node *Node
 }
 
 // ApplyLog responses the request.

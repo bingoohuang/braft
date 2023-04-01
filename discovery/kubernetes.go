@@ -16,13 +16,13 @@ import (
 )
 
 type kubernetesDiscovery struct {
-	namespace     string
 	serviceLabels map[string]string
-	portName      string
 	discoveryChan chan string
 	stopChan      chan bool
 
 	clientSet *kubernetes.Clientset
+	namespace string
+	portName  string
 }
 
 func NewKubernetesDiscovery(namespace, portName string, serviceLabels map[string]string) Discovery {

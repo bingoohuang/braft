@@ -15,10 +15,11 @@ import (
 )
 
 type FSM struct {
-	ser          *marshal.TypeRegister
+	ser         *marshal.TypeRegister
+	shortNodeID string
+
 	services     []Service
 	reqDataTypes []ReqTypeInfo
-	shortNodeID  string
 
 	RaftLogSum uint64
 }
@@ -129,8 +130,8 @@ func getTargetTypeInfo(types []ReqTypeInfo, result interface{}) (ReqTypeInfo, er
 }
 
 type Snapshot struct {
-	sync.Mutex
 	fsm *FSM
+	sync.Mutex
 }
 
 func newSnapshot(fsm *FSM) raft.FSMSnapshot { return &Snapshot{fsm: fsm} }

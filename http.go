@@ -19,17 +19,17 @@ import (
 
 // HTTPConfig is configuration for HTTP service.
 type HTTPConfig struct {
-	EnableKv bool
 	Handlers []pathHalder
+	EnableKv bool
 }
 
 // HandlerFunc defines the handler used by gin middleware as return value.
 type HandlerFunc func(ctx *gin.Context, n *Node)
 
 type pathHalder struct {
+	handler HandlerFunc
 	method  string
 	path    string
-	handler HandlerFunc
 }
 
 // HTTPConfigFn is function options for HTTPConfig.
@@ -93,29 +93,32 @@ func getQuery(ctx *gin.Context, k ...string) string {
 
 // RaftNode is a node info of raft cluster.
 type RaftNode struct {
-	Error          string `json:",omitempty"`
-	Leader         string
-	ServerID       string
-	Address        string
-	RaftState      string
-	RaftID         RaftID
-	DiscoveryNodes []string
-	StartTime      string
-	Duration       string
+	ServerID  string
+	BuildTime string
+	Duration  string
 
-	Rss        uint64
-	RaftLogSum uint64
-	Pid        uint64
-
-	GitCommit  string
-	BuildTime  string
-	GoVersion  string
+	Address    string
+	RaftState  string
+	Leader     string
 	AppVersion string
-	Pcpu       float32
+	StartTime  string
+	Error      string `json:",omitempty"`
+	GoVersion  string
+
+	GitCommit      string
+	DiscoveryNodes []string
+
+	Addr []string
 
 	BizData json.RawMessage
 
-	Addr []string
+	RaftID RaftID
+
+	RaftLogSum uint64
+	Pid        uint64
+
+	Rss  uint64
+	Pcpu float32
 }
 
 // ServeRaft services the raft http api.

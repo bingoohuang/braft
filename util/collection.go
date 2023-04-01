@@ -3,9 +3,9 @@ package util
 import "sync"
 
 type UniqueQueue struct {
-	sync.Mutex
 	elems        []string
 	maxQueueSize int
+	sync.Mutex
 }
 
 func NewUniqueQueue(maxQueueSize int) *UniqueQueue {

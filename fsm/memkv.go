@@ -17,10 +17,10 @@ const (
 )
 
 type KvRequest struct {
+	Value     interface{}
 	KvOperate KvOperate
 	MapName   string
 	Key       string
-	Value     interface{}
 }
 
 type KvExectable interface {

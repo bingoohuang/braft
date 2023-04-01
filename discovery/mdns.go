@@ -12,15 +12,15 @@ import (
 )
 
 type mdnsDiscovery struct {
-	nodeID        string
-	serviceName   string
-	nodePort      int
+	ctx           context.Context
 	mdnsServer    *zeroconf.Server
 	discoveryChan chan string
 	tempQueue     *util.UniqueQueue
-	ctx           context.Context
 	cancel        context.CancelFunc
 	wg            *sync.WaitGroup
+	nodeID        string
+	serviceName   string
+	nodePort      int
 }
 
 func NewMdnsDiscovery(serviceName string) Discovery {

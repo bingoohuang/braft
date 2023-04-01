@@ -3,6 +3,7 @@ package braft
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -41,29 +42,31 @@ import (
 
 // Node is the raft cluster node.
 type Node struct {
-	ID               string
-	RaftID           RaftID
-	addr             string
-	Raft             *raft.Raft
-	GrpcServer       *grpc.Server
-	TransportManager *transport.Manager
-	memberConfig     *memberlist.Config
-	mList            *memberlist.Memberlist
-	stopped          uint32
-	Conf             *Config
+	StartTime time.Time
+	ctx       context.Context
 
-	StartTime   time.Time
-	distributor *fsm.Distributor
-	raftLogSum  *uint64
-
-	addrQueue  *util.UniqueQueue
-	notifyCh   chan NotifyEvent
 	wg         *sync.WaitGroup
-	ctx        context.Context
-	cancelFunc context.CancelFunc
+	Raft       *raft.Raft
+	GrpcServer *grpc.Server
 
-	httpServer *http.Server
-	fns        []ConfigFn
+	httpServer   *http.Server
+	memberConfig *memberlist.Config
+	mList        *memberlist.Memberlist
+	cancelFunc   context.CancelFunc
+
+	Conf *Config
+
+	TransportManager *transport.Manager
+	distributor      *fsm.Distributor
+	raftLogSum       *uint64
+
+	addrQueue *util.UniqueQueue
+	notifyCh  chan NotifyEvent
+	addr      string
+	ID        string
+	fns       []ConfigFn
+	RaftID    RaftID
+	stopped   uint32
 }
 
 // Config is the configuration of the node.
@@ -81,9 +84,9 @@ type Config struct {
 // RaftID is the structure of node ID.
 type RaftID struct {
 	ID                  string
-	Rport, Dport, Hport int
 	Hostname            string
 	IP                  []string
+	Rport, Dport, Hport int
 }
 
 // NewNode returns an BRaft node.
@@ -392,8 +395,8 @@ func (t NotifyType) String() string {
 }
 
 type NotifyEvent struct {
-	NotifyType
 	*memberlist.Node
+	NotifyType
 }
 
 // Sleep is used to give the server time to unsubscribe the client and reset the stream
@@ -434,7 +437,7 @@ func GoFor[T any](wg *sync.WaitGroup, ctx context.Context, ch <-chan T, f func(e
 					return
 				}
 				if err := f(elem); err != nil {
-					if err == io.EOF {
+					if errors.Is(err, io.EOF) {
 						return
 					}
 					log.Printf("E GoFor invoke fn failed: %v", err)

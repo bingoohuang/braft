@@ -65,8 +65,8 @@ func (d *DemoItem) GetItemID() string       { return d.ID }
 func (d *DemoItem) SetNodeID(nodeID string) { d.NodeID = nodeID }
 
 type DemoDist struct {
-	Items  []DemoItem
 	Common string
+	Items  []DemoItem
 }
 
 func (d *DemoDist) GetDistributableItems() interface{} { return d.Items }
