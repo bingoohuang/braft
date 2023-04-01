@@ -110,7 +110,7 @@ type RaftNode struct {
 
 	Addr []string
 
-	BizData json.RawMessage
+	BizData json.RawMessage `json:",omitempty"`
 
 	RaftID RaftID
 
