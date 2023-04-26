@@ -1,7 +1,7 @@
 package braft
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/bingoohuang/braft/discovery"
 	"github.com/bingoohuang/braft/fsm"
@@ -12,11 +12,15 @@ import (
 // ConfigFn is the function option pattern for the NodeConfig.
 type ConfigFn func(*Config)
 
+// NodeState 节点状态
 type NodeState int
 
 const (
+	// NodeFollower 表示节点为 Follower 状态
 	NodeFollower NodeState = iota
+	// NodeLeader 表示节点为 Leader 状态
 	NodeLeader
+	// NodeShuttingDown 表示节点处于 ShuttingDown 状态
 	NodeShuttingDown
 )
 
@@ -59,8 +63,8 @@ func WithTypeRegister(s *marshal.TypeRegister) ConfigFn {
 // WithEnableHTTP specifies whether to enable the http service.
 func WithEnableHTTP(v bool) ConfigFn { return func(c *Config) { c.EnableHTTP = v } }
 
-// WithHttpFns specifies the http service.
-func WithHttpFns(s ...HTTPConfigFn) ConfigFn {
+// WithHTTPFns specifies the http service.
+func WithHTTPFns(s ...HTTPConfigFn) ConfigFn {
 	return func(c *Config) {
 		c.HTTPConfigFns = append(c.HTTPConfigFns, s...)
 		if !c.EnableHTTP && len(c.HTTPConfigFns) > 0 {
@@ -89,17 +93,15 @@ func createConfig(fns []ConfigFn) (*Config, error) {
 	}
 
 	if conf.DataDir == "" {
-		dir, err := ioutil.TempDir("", "braft")
+		dir, err := os.MkdirTemp("", "braft")
 		if err != nil {
 			return nil, err
 		}
 		conf.DataDir = dir
-	} else {
+	} else if !util.IsDir(conf.DataDir) {
 		// stable/log/snapshot store config
-		if !util.IsDir(conf.DataDir) {
-			if err := util.RemoveCreateDir(conf.DataDir); err != nil {
-				return nil, err
-			}
+		if err := util.RemoveCreateDir(conf.DataDir); err != nil {
+			return nil, err
 		}
 	}
 	return conf, nil

@@ -3,8 +3,8 @@ package pidusage
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"os/exec"
 	"path"
 	"runtime"
@@ -120,13 +120,13 @@ func statFromPS(pid int) (*Info, error) {
 }
 
 func statFromProc(pid int) (*Info, error) {
-	uptimeFileBytes, err := ioutil.ReadFile(path.Join("/proc", "uptime"))
+	uptimeFileBytes, err := os.ReadFile(path.Join("/proc", "uptime"))
 	if err != nil {
 		return nil, err
 	}
 	uptime := parseFloat(strings.Split(string(uptimeFileBytes), " ")[0])
 
-	procStatFileBytes, err := ioutil.ReadFile(path.Join("/proc", strconv.Itoa(pid), "stat"))
+	procStatFileBytes, err := os.ReadFile(path.Join("/proc", strconv.Itoa(pid), "stat"))
 	if err != nil {
 		return nil, err
 	}

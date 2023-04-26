@@ -181,6 +181,7 @@ func (n *Node) GetRaftNodes(raftServers []raft.Server) (nodes []RaftNode) {
 	return
 }
 
+// GetRaftServers 获得 Raft 节点服务器列表.
 func (n *Node) GetRaftServers() []raft.Server {
 	return n.Raft.GetConfiguration().Configuration().Servers
 }

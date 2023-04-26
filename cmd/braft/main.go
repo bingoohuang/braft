@@ -42,7 +42,7 @@ func main() {
 				t.Stop()
 			}
 		}),
-		braft.WithHttpFns(
+		braft.WithHTTPFns(
 			braft.WithHandler(http.MethodPost, "/distribute", dh.distributePost),
 			braft.WithHandler(http.MethodGet, "/distribute", dh.distributeGet),
 		))

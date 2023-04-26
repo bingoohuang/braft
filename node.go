@@ -275,7 +275,7 @@ func (n *Node) start() (err error) {
 		delayLeaderChanger := util.NewDelayWorker(n.wg, n.ctx, d, func(state NodeState, t time.Time) {
 			n.Conf.LeaderChange(n, state)
 		})
-		GoFor(n.wg, n.ctx, n.Raft.LeaderCh(), func(becameLeader bool) error {
+		GoFor(n.ctx, n.wg, n.Raft.LeaderCh(), func(becameLeader bool) error {
 			log.Printf("becameLeader: %v", becameLeader)
 			if becameLeader {
 				delayLeaderChanger.Notify(NodeLeader)
@@ -313,9 +313,9 @@ func (n *Node) Stop() {
 	}
 
 	n.Conf.Discovery.Stop()
-	//if err := n.mList.Leave(10 * time.Second); err != nil {
-	//	log.Printf("Failed to leave from discovery: %q", err.Error())
-	//}
+	// if err := n.mList.Leave(10 * time.Second); err != nil {
+	// 	log.Printf("Failed to leave from discovery: %q", err.Error())
+	// }
 	if err := n.mList.Shutdown(); err != nil {
 		log.Printf("E! shutdown discovery failed: %v", err)
 	}
@@ -347,7 +347,7 @@ func (n *Node) findServer(serverID string) bool {
 
 // goHandleDiscoveredNodes handles the discovered Node additions
 func (n *Node) goHandleDiscoveredNodes(discoveryChan chan string) {
-	GoFor(n.wg, n.ctx, discoveryChan, func(peer string) error {
+	GoFor(n.ctx, n.wg, discoveryChan, func(peer string) error {
 		peerHost, port := util.Cut(peer, ":")
 		if port == "" {
 			peer = fmt.Sprintf("%s:%d", peerHost, EnvRport)
@@ -372,12 +372,16 @@ func (n *Node) goHandleDiscoveredNodes(discoveryChan chan string) {
 	})
 }
 
+// NotifyType 定义通知类型
 type NotifyType int
 
 const (
 	_ NotifyType = iota
+	// NotifyJoin 通知加入 Raft 集群
 	NotifyJoin
+	// NotifyLeave 通知离开 Raft 集群
 	NotifyLeave
+	// NotifyUpdate 通知更新 Raft 集群
 	NotifyUpdate
 )
 
@@ -394,6 +398,7 @@ func (t NotifyType) String() string {
 	}
 }
 
+// NotifyEvent 通知事件
 type NotifyEvent struct {
 	*memberlist.Node
 	NotifyType
@@ -404,6 +409,7 @@ func Sleep(d time.Duration) {
 	time.Sleep(d + time.Duration(rand.Int()%1000)*time.Microsecond)
 }
 
+// Go 开始一个协程
 func Go(wg *sync.WaitGroup, f func()) {
 	if wg != nil {
 		wg.Add(1)
@@ -418,7 +424,8 @@ func Go(wg *sync.WaitGroup, f func()) {
 	}()
 }
 
-func GoFor[T any](wg *sync.WaitGroup, ctx context.Context, ch <-chan T, f func(elem T) error) {
+// GoFor 开始一个协程，从 ch 读取数据，调用 f 进行处理
+func GoFor[T any](ctx context.Context, wg *sync.WaitGroup, ch <-chan T, f func(elem T) error) {
 	if wg != nil {
 		wg.Add(1)
 	}
@@ -450,14 +457,14 @@ func GoFor[T any](wg *sync.WaitGroup, ctx context.Context, ch <-chan T, f func(e
 func (n *Node) goDealNotifyEvent() {
 	waitLeader := make(chan NotifyEvent, 100)
 
-	GoFor(n.wg, n.ctx, n.notifyCh, func(e NotifyEvent) error {
+	GoFor(n.ctx, n.wg, n.notifyCh, func(e NotifyEvent) error {
 		n.processNotify(e, waitLeader)
 		return nil
 	})
 
 	waitLeaderTime := util.EnvDuration("BRAFT_RESTART_MIN", 90*time.Second)
 
-	GoFor(n.wg, n.ctx, waitLeader, func(e NotifyEvent) error {
+	GoFor(n.ctx, n.wg, waitLeader, func(e NotifyEvent) error {
 		leaderAddr, leaderID, err := n.waitLeader(waitLeaderTime)
 		if err != nil {
 			return err
@@ -619,6 +626,8 @@ func (n *Node) wait() {
 
 // logger adapters logger to LevelLogger.
 type logger struct{}
+
+func (l *logger) GetLevel() hclog.Level { return hclog.Debug }
 
 // Log Emit a message and key/value pairs at a provided log level
 func (l *logger) Log(level hclog.Level, msg string, args ...interface{}) {

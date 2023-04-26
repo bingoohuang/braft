@@ -1,3 +1,4 @@
+// Package braft 提供了 raft 更加方便的集成 API 胶水代码。
 package braft
 
 import (
@@ -19,12 +20,12 @@ import (
 
 // ApplyOnLeader apply a payload on the leader node.
 func (n *Node) ApplyOnLeader(payload []byte, timeout time.Duration) (interface{}, error) {
-	addr := string(n.Raft.Leader())
+	addr, _ := n.Raft.LeaderWithID()
 	if addr == "" {
 		return nil, errors.New("unknown leader")
 	}
 
-	ctx, deferFn, c, err := GetRaftClient(addr, timeout)
+	ctx, deferFn, c, err := GetRaftClient(string(addr), timeout)
 	defer deferFn()
 	if err != nil {
 		return nil, err
@@ -108,7 +109,7 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 	default:
 		s = strings.TrimPrefix(s, "static:")
 		peers := ss.Split(s, ss.WithSeps(","), ss.WithIgnoreEmpty(true), ss.WithTrimSpace(true))
-		if len(peers) <= 0 {
+		if len(peers) == 0 {
 			peers = DefaultStaticPeers
 		}
 
@@ -117,22 +118,33 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 }
 
 var (
-	DefaultMdnsService      string
-	DefaultK8sNamespace     string
-	DefaultK8sPortName      string
+	// DefaultMdnsService 默认 Mdns 服务名称
+	DefaultMdnsService string
+	// DefaultK8sNamespace 默认 k8s 命名空间名称
+	DefaultK8sNamespace string
+	// DefaultK8sPortName 默认 k8s 端口名称
+	DefaultK8sPortName string
+	// DefaultK8sServiceLabels 默认 i8s 服务标签
 	DefaultK8sServiceLabels map[string]string
-	DefaultDiscovery        string
-	EnvIP                   string
-	EnvRport                int
-	EnvDport                int
-	EnvHport                int
-	DefaultStaticPeers      []string
+	// DefaultDiscovery 默认发现策略
+	DefaultDiscovery string
+	// EnvIP IP 值
+	EnvIP string
+	// EnvRport Raft 端口值
+	EnvRport int
+	// EnvDport Discovery 端口值
+	EnvDport int
+	// EnvHport HTTP 端口值
+	EnvHport int
+	// DefaultStaticPeers 静态端点列表
+	DefaultStaticPeers []string
 )
 
 func init() {
 	Setup()
 }
 
+// Setup 初始化设置客户端
 func Setup() {
 	// DefaultMdnsService is the default mDNS service.
 	DefaultMdnsService = ss.Or(util.Env("MDNS_SERVICE", "MDS"), "_braft._tcp,_windows")

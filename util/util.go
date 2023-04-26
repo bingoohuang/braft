@@ -33,11 +33,13 @@ func OrSlice(a, b map[string]string) map[string]string {
 // Cut cuts the s into two ones.
 func Cut(s, sep string) (a, b string) {
 	ret := strings.Split(s, sep)
-	if len(ret) >= 2 {
+
+	switch retSize := len(ret); {
+	case retSize >= 2:
 		return ret[0], ret[1]
-	} else if len(ret) >= 1 {
+	case retSize >= 1:
 		return ret[0], ""
-	} else {
+	default:
 		return "", ""
 	}
 }

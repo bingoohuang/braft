@@ -3,7 +3,6 @@ package fsm
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"reflect"
 	"sync"
@@ -40,8 +39,7 @@ func NewRoutingFSM(shortNodeID string, services []Service, ser *marshal.TypeRegi
 func (i *FSM) Apply(raftlog *raft.Log) interface{} {
 	log.Printf("FSM Apply LogType: %s", raftlog.Type)
 
-	switch raftlog.Type {
-	case raft.LogCommand:
+	if raftlog.Type == raft.LogCommand {
 		payload, err := i.ser.Unmarshal(raftlog.Data)
 		if err != nil {
 			log.Printf("E! Unmarshal, error: %v", err)
@@ -67,7 +65,7 @@ func (i *FSM) Snapshot() (raft.FSMSnapshot, error) { return newSnapshot(i), nil 
 func (i *FSM) Restore(closer io.ReadCloser) error {
 	log.Printf("FSM Restore")
 
-	snapData, err := ioutil.ReadAll(closer)
+	snapData, err := io.ReadAll(closer)
 	if err != nil {
 		return err
 	}
