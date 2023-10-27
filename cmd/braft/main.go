@@ -35,8 +35,9 @@ func main() {
 			log.Printf("nodeState: %s", nodeState)
 			if nodeState == braft.NodeLeader {
 				raftState := n.Raft.State().String()
+				nodeIds := n.ShortNodeIds()
 				t.Start(func() {
-					log.Printf("ticker ticker, I'm %s", raftState)
+					log.Printf("ticker ticker, I'm %s, nodeIds: %v", raftState, nodeIds)
 				})
 			} else {
 				t.Stop()
