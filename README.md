@@ -48,13 +48,11 @@ func main() {
 	if err := node.Start(); err != nil {
 		log.Fatalf("failed to start node, error: %v", err)
 	}
-
-	node.RunHTTP()
 }
 ```
 
 1. use mDNS discovery: `braft` on multiple nodes.
-1. use static discovery: `BRAFT_DISCOVERY="192.168.126.16,192.168.126.18,192.168.126.182" braft`  on
+2. use static discovery: `BRAFT_DISCOVERY="192.168.126.16,192.168.126.18,192.168.126.182" braft`  on
    multiple nodes.
 
 ## env VARIABLES
