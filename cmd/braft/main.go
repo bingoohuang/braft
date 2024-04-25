@@ -101,7 +101,7 @@ func (d *DemoPicker) distributePost(ctx *gin.Context, n *braft.Node) {
 func makeRandItems(q string) (ret []DemoItem) {
 	n, _ := strconv.Atoi(q)
 	if n <= 0 {
-		n = randx.IntN(20)
+		n = randx.IntN(20) + 1
 	}
 
 	for i := 0; i < n; i++ {

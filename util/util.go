@@ -45,10 +45,13 @@ func Cut(s, sep string) (a, b string) {
 }
 
 // Think sleeps for a duration by envValue.
-func Think(thinkTime string) {
+func Think(thinkTime, reason string) {
+	if reason == "" {
+		reason = "thinkTime"
+	}
 	if tt, _ := thinktime.ParseThinkTime(thinkTime); tt != nil {
 		if sleeping := tt.Think(false); sleeping > 0 {
-			log.Printf("sleeping for thinkTime %s", sleeping)
+			log.Printf("sleeping for %s %s", reason, sleeping)
 			time.Sleep(sleeping)
 		}
 	}

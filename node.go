@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -212,16 +213,20 @@ func (n *Node) Start() (err error) {
 
 func (n *Node) start() (err error) {
 	n.StartTime = time.Now()
-	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s", EnvRport, EnvDport, EnvHport, n.DiscoveryName())
+	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s",
+		EnvRport, EnvDport, EnvHport, n.DiscoveryName())
 
 	// 防止各个节点同时启动太快，随机休眠
-	util.Think(ss.Or(util.Env("BRAFT_SLEEP", "BSL"), "10ms-15s"))
+	util.Think(ss.Or(util.Env("BRAFT_SLEEP", "BSL"), "10ms-15s"), "")
 
 	// set stopped as false
 	atomic.CompareAndSwapUint32(&n.stopped, 1, 0)
 
 	f := n.Raft.BootstrapCluster(raft.Configuration{
-		Servers: []raft.Server{{ID: raft.ServerID(n.ID), Address: n.TransportManager.Transport().LocalAddr()}},
+		Servers: []raft.Server{{
+			ID:      raft.ServerID(n.ID),
+			Address: n.TransportManager.Transport().LocalAddr(),
+		}},
 	})
 	if err := f.Error(); err != nil {
 		return err
@@ -299,7 +304,7 @@ func (n *Node) start() (err error) {
 // DiscoveryName returns the name of discovery.
 func (n *Node) DiscoveryName() string { return n.Conf.Discovery.Name() }
 
-// Stop stops the node and notifies on stopped channel returned in Start.
+// Stop stops the node and notifies on a stopped channel returned in Start.
 func (n *Node) Stop() {
 	if !atomic.CompareAndSwapUint32(&n.stopped, 0, 1) {
 		return
@@ -482,15 +487,16 @@ func (n *Node) waitLeader(minWait time.Duration) (leaderAddr, leaderID string, e
 	start := time.Now()
 	for {
 		if addr, id := n.Raft.LeaderWithID(); addr != "" {
+			log.Printf("waited leader: %s cost: %s", id, time.Since(start))
 			return string(addr), string(id), nil
 		}
 		if time.Since(start) >= minWait {
+			log.Printf("stop to wait leader, expired %s >= %s", time.Since(start), minWait)
 			n.Stop()
 			return "", "", io.EOF
 		}
 
-		log.Printf("sleeping 1s to wait for leader")
-		Sleep(1 * time.Second)
+		util.Think("3-5s", "wait for leader")
 	}
 }
 
@@ -522,6 +528,7 @@ func (n *Node) processNotifyAtLeader(isLeader bool, e NotifyEvent) {
 		n.join(e.Node)
 	case NotifyLeave:
 		n.leave(e.Node)
+	default:
 	}
 }
 
@@ -631,6 +638,22 @@ func (l *logger) GetLevel() hclog.Level { return hclog.Debug }
 
 // Log Emit a message and key/value pairs at a provided log level
 func (l *logger) Log(level hclog.Level, msg string, args ...interface{}) {
+	for i, arg := range args {
+		// Convert the field value to a string.
+		switch st := arg.(type) {
+		case hclog.Hex:
+			args[i] = "0x" + strconv.FormatUint(uint64(st), 16)
+		case hclog.Octal:
+			args[i] = "0" + strconv.FormatUint(uint64(st), 8)
+		case hclog.Binary:
+			args[i] = "0b" + strconv.FormatUint(uint64(st), 2)
+		case hclog.Format:
+			args[i] = fmt.Sprintf(st[0].(string), st[1:]...)
+		case hclog.Quote:
+			args[i] = strconv.Quote(string(st))
+		}
+	}
+
 	v := append([]interface{}{"D!", msg}, args...)
 
 	switch {

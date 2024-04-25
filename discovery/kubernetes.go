@@ -43,7 +43,7 @@ func (k *kubernetesDiscovery) Name() string {
 }
 
 func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
-	util.Think(ss.Or(util.Env("K8S_SLEEP"), "15-30s"))
+	util.Think(ss.Or(util.Env("K8S_SLEEP"), "15-30s"), "")
 
 	cc, err := rest.InClusterConfig()
 	if err != nil {
