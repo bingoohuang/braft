@@ -1,21 +1,21 @@
-An easy to use customizable library to make your Go application Distributed, Highly available, Fault Tolerant etc...
+An easy to use a customizable library to make your Go application Distributed, Highly available, Fault Tolerant etc...
 using Hashicorp's [Raft](https://github.com/hashicorp/raft) library which implements the
 [Raft Consensus Algorithm](https://raft.github.io/). Original fork
-from [ksrichard/easyraf](https://github.com/ksrichard/easyraft)
+from [ksrichard/easyraft](https://github.com/ksrichard/easyraft)
 
 ## Features
 
 - **Configure and start** a fully functional Raft node by writing ~10 lines of code
 - **Automatic Node discovery** (nodes are discovering each other using Discovery method)
     1. **Built-in discovery methods**:
-        1. **Static Discovery** (having a fixed list of nodes addresses)
+        1. **Static Discovery** (having a fixed list of node addresses)
         2. **mDNS Discovery** for local network node discovery
         3. **Kubernetes discovery**
 - **Cloud Native** because of kubernetes discovery and easy to load balance features
-- **Automatic forward to leader** - you can contact any node to perform operations, everything will be forwarded to the
+- **Automatic forward to leader** - you can contact any node to perform operations; everything will be forwarded to the
   actual leader node
-- **Node monitoring/removal** - the nodes are monitoring each other and if there are some failures then the offline
-  nodes get removed automatically from cluster
+- **Node monitoring/removal** - the nodes are monitoring each other and if there are some failures, then the offline
+  nodes get removed automatically from the cluster
 - **Simplified state machine** - there is an already implemented generic state machine which handles the basic
   operations and routes requests to State Machine Services (see **Examples**)
 - **All layers are customizable** - you can select or implement your own **State Machine Service, Message Serializer**
@@ -24,7 +24,7 @@ from [ksrichard/easyraf](https://github.com/ksrichard/easyraft)
   add your own services
 
 **Note:** snapshots are not supported at the moment, will be handled at later point
-**Note:** at the moment the communication between nodes are insecure, I recommend to not expose that port
+**Note:** at the moment the communication between nodes is insecure, I recommend not exposing that port
 
 ## Get Started
 

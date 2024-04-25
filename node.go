@@ -590,7 +590,7 @@ func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{
 	return n.ApplyOnLeader(payload, 10*time.Second)
 }
 
-// ShortNodeIds returns a sorted list of short node IDs of the current raft cluster.
+// ShortNodeIds returns a sorted list of short node IDs in the current raft cluster.
 func (n *Node) ShortNodeIds() (nodeIds []string) {
 	for _, server := range n.GetRaftServers() {
 		rid := ParseRaftID(string(server.ID))
