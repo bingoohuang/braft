@@ -104,105 +104,81 @@ At 3-different hosts:
 
 ```sh
 $ gurl :15002/raft
-GET /raft? HTTP/1.1
-Host: localhost:15002
-Accept: application/json
-Accept-Encoding: gzip, deflate
-Content-Type: application/json
-Gurl-Date: Tue, 08 Feb 2022 14:09:48 GMT
-User-Agent: gurl/0.1.0
+```
 
-
-HTTP/1.1 200 OK
-Content-Type: application/json; charset=utf-8
-Date: Tue, 08 Feb 2022 14:09:48 GMT
-
+```json
 {
-  "CurrentLeader": true,
-  "Discovery": "mdns://_braft._tcp",
-  "Leader": "192.168.0.103:15000",
-  "NodeNum": 3,
-  "Nodes": [
+  "currentLeader": false,
+  "discovery": "mdns://_braft._tcp,_demo",
+  "leaderAddr": "192.168.6.240:16000",
+  "leaderID": "hKJJRLsyZ1UxVmdwM1lWcEdmNTdWSGRmMjVQbTM5b1OoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKxJaWZmdjJ1akIwVWw",
+  "nodeNum": 2,
+  "nodes": [
     {
-      "Leader": "192.168.0.103:15000",
-      "ServerID": "hqJJRLsyNHBZeUliV0YxaVpwRHlSTlZzcjd6SDhuSG2lUnBvcnTNOpilRHBvcnTNOpmlSHBvcnTNOpqoSG9zdG5hbWWpbG9jYWxob3N0oklQka0xOTIuMTY4LjAuMTAz",
-      "Address": "192.168.0.103:15000",
-      "RaftState": "Leader",
-      "RaftID": {
-        "ID": "24pYyIbWF1iZpDyRNVsr7zH8nHm",
-        "Rport": 15000,
-        "Dport": 15001,
-        "Hport": 15002,
-        "Hostname": "localhost",
-        "IP": [
-          "192.168.0.103"
-        ]
+      "serverID": "hKJJRLsyZ1UxUnQ3SWJXdG5lN1l5VlhuQ0QwSnVZYVKoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKw2WlZBZ0ZiMnh6aDc",
+      "buildTime": "2024-05-15T09:41:41+0800",
+      "duration": "59.048655379s",
+      "address": "192.168.6.240:15000",
+      "raftState": "Follower",
+      "leader": "192.168.6.240:16000",
+      "appVersion": "1.0.0",
+      "startTime": "2024-05-15T09:42:16.594002+08:00",
+      "goVersion": "go1.22.3_darwin/amd64",
+      "gitCommit": "master-18f39a8@2024-04-25T14:20:29+08:00",
+      "discoveryNodes": ["192.168.6.240:15000", "192.168.6.240:16000"],
+      "addr": ["192.168.6.240:15000"],
+      "raftID": {
+        "id": "2gU1Rt7IbWtne7YyVXnCD0JuYaR",
+        "hostname": "bingoodeMBP.lan",
+        "ip": "192.168.6.240",
+        "sqid": "6ZVAgFb2xzh7"
       },
-      "DiscoveryNodes": [
-        "192.168.0.103:17000",
-        "192.168.0.103:15000",
-        "192.168.0.103:16000"
-      ],
-      "StartTime": "2022-02-08T22:07:27.941626+08:00",
-      "Duration": "2m20.548861052s",
-      "GitCommit": "22b4c8a@2022-02-08T21:57:51+08:00",
-      "BuildTime": "2022-02-08T22:06:22+0800",
-      "GoVersion": "go1.17.6_darwin/amd64",
-      "AppVersion": "1.0.0"
+      "raftLogSum": 0,
+      "pid": 82043,
+      "rss": 33443840,
+      "pcpu": 1,
+      "rport": 15000,
+      "dport": 15001,
+      "hport": 15002
     },
     {
-      "Leader": "192.168.0.103:15000",
-      "ServerID": "hqJJRLsyNHBZejRnYjZRTFM3cmpINFBGMzkxcEY4Y1OlUnBvcnTNPoClRHBvcnTNPoGlSHBvcnTNPoKoSG9zdG5hbWWpbG9jYWxob3N0oklQka0xOTIuMTY4LjAuMTAz",
-      "Address": "192.168.0.103:16000",
-      "RaftState": "Follower",
-      "RaftID": {
-        "ID": "24pYz4gb6QLS7rjH4PF391pF8cS",
-        "Rport": 16000,
-        "Dport": 16001,
-        "Hport": 16002,
-        "Hostname": "localhost",
-        "IP": [
-          "192.168.0.103"
-        ]
+      "serverID": "hKJJRLsyZ1UxVmdwM1lWcEdmNTdWSGRmMjVQbTM5b1OoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKxJaWZmdjJ1akIwVWw",
+      "buildTime": "2024-05-15T09:41:41+0800",
+      "duration": "28.132773032s",
+      "address": "192.168.6.240:16000",
+      "raftState": "Leader",
+      "leader": "192.168.6.240:16000",
+      "appVersion": "1.0.0",
+      "startTime": "2024-05-15T09:42:47.519663+08:00",
+      "goVersion": "go1.22.3_darwin/amd64",
+      "gitCommit": "master-18f39a8@2024-04-25T14:20:29+08:00",
+      "discoveryNodes": ["192.168.6.240:16000"],
+      "addr": ["192.168.6.240:16000"],
+      "raftID": {
+        "id": "2gU1Vgp3YVpGf57VHdf25Pm39oS",
+        "hostname": "bingoodeMBP.lan",
+        "ip": "192.168.6.240",
+        "sqid": "Iiffv2ujB0Ul"
       },
-      "DiscoveryNodes": [
-        "192.168.0.103:17000",
-        "192.168.0.103:16000",
-        "192.168.0.103:15000"
-      ],
-      "StartTime": "2022-02-08T22:07:34.031526+08:00",
-      "Duration": "2m14.45963851s",
-      "GitCommit": "22b4c8a@2022-02-08T21:57:51+08:00",
-      "BuildTime": "2022-02-08T22:06:22+0800",
-      "GoVersion": "go1.17.6_darwin/amd64",
-      "AppVersion": "1.0.0"
+      "raftLogSum": 0,
+      "pid": 82453,
+      "rss": 33402880,
+      "pcpu": 1.2,
+      "rport": 16000,
+      "dport": 16001,
+      "hport": 16002
+    }
+  ],
+  "raftServers": [
+    {
+      "suffrage": 0,
+      "id": "hKJJRLsyZ1UxUnQ3SWJXdG5lN1l5VlhuQ0QwSnVZYVKoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKw2WlZBZ0ZiMnh6aDc",
+      "address": "192.168.6.240:15000"
     },
     {
-      "Leader": "192.168.0.103:15000",
-      "ServerID": "hqJJRLsyNHBZemxxRWFxTHNuMHdxQ3p3clY4ZnJGZVWlUnBvcnTNQmilRHBvcnTNQmmlSHBvcnTNQmqoSG9zdG5hbWWpbG9jYWxob3N0oklQka0xOTIuMTY4LjAuMTAz",
-      "Address": "192.168.0.103:17000",
-      "RaftState": "Follower",
-      "RaftID": {
-        "ID": "24pYzlqEaqLsn0wqCzwrV8frFeU",
-        "Rport": 17000,
-        "Dport": 17001,
-        "Hport": 17002,
-        "Hostname": "localhost",
-        "IP": [
-          "192.168.0.103"
-        ]
-      },
-      "DiscoveryNodes": [
-        "192.168.0.103:16000",
-        "192.168.0.103:15000",
-        "192.168.0.103:17000"
-      ],
-      "StartTime": "2022-02-08T22:07:39.590406+08:00",
-      "Duration": "2m8.90139164s",
-      "GitCommit": "22b4c8a@2022-02-08T21:57:51+08:00",
-      "BuildTime": "2022-02-08T22:06:22+0800",
-      "GoVersion": "go1.17.6_darwin/amd64",
-      "AppVersion": "1.0.0"
+      "suffrage": 0,
+      "id": "hKJJRLsyZ1UxVmdwM1lWcEdmNTdWSGRmMjVQbTM5b1OoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKxJaWZmdjJ1akIwVWw",
+      "address": "192.168.6.240:16000"
     }
   ]
 }

@@ -158,3 +158,7 @@ func FileExists(name string) bool {
 	}
 	return true
 }
+
+func Pick1[T any](s T, _ ...any) T {
+	return s
+}

@@ -27,7 +27,7 @@ func NewMdnsDiscovery(serviceName string) Discovery {
 	return &mdnsDiscovery{
 		// https://github.com/grandcat/zeroconf
 		// Multiple subtypes may be added to service name, separated by commas.
-		// e.g _workstation._tcp,_windows has subtype _windows.
+		// e.g. _workstation._tcp,_windows has subtype _windows.
 		serviceName:   serviceName,
 		discoveryChan: make(chan string),
 		tempQueue:     util.NewUniqueQueue(100),

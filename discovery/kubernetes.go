@@ -70,7 +70,7 @@ func (k *kubernetesDiscovery) discovery() {
 	}
 }
 
-func (k *kubernetesDiscovery) search(gorun bool) {
+func (k *kubernetesDiscovery) search(async bool) {
 	result, err := k.Search()
 	if err != nil {
 		log.Printf("search k8s error: %v", err)
@@ -82,7 +82,7 @@ func (k *kubernetesDiscovery) search(gorun bool) {
 		}
 	}
 
-	if gorun {
+	if async {
 		go f()
 	} else {
 		f()

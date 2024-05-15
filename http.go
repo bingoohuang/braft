@@ -5,16 +5,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/bingoohuang/braft/fsm"
+	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/fn"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/gg/pkg/v"
 	"github.com/bingoohuang/golog/pkg/ginlogrus"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/raft"
+	"github.com/samber/lo"
+	"github.com/sqids/sqids-go"
 )
 
 // HTTPConfig is configuration for HTTP service.
@@ -93,32 +95,46 @@ func getQuery(ctx *gin.Context, k ...string) string {
 
 // RaftNode is a node info of raft cluster.
 type RaftNode struct {
-	ServerID  string
-	BuildTime string
-	Duration  string
+	ServerID  string `json:"serverID"`
+	BuildTime string `json:"buildTime"`
+	Duration  string `json:"duration"`
 
-	Address    string
-	RaftState  string
-	Leader     string
-	AppVersion string
-	StartTime  string
-	Error      string `json:",omitempty"`
-	GoVersion  string
+	Address    string `json:"address"`
+	RaftState  string `json:"raftState"`
+	Leader     string `json:"leader"`
+	AppVersion string `json:"appVersion"`
+	StartTime  string `json:"startTime"`
+	Error      string `json:"error,omitempty"`
+	GoVersion  string `json:"goVersion"`
 
-	GitCommit      string
-	DiscoveryNodes []string
+	GitCommit      string   `json:"gitCommit"`
+	DiscoveryNodes []string `json:"discoveryNodes"`
 
-	Addr []string
+	Addr []string `json:"addr"`
 
-	BizData json.RawMessage `json:",omitempty"`
+	BizData json.RawMessage `json:"bizData,omitempty"`
 
-	RaftID RaftID
+	RaftID RaftID `json:"raftID"`
 
-	RaftLogSum uint64
-	Pid        uint64
+	RaftLogSum uint64 `json:"raftLogSum"`
+	Pid        uint64 `json:"pid"`
 
-	Rss  uint64
-	Pcpu float32
+	Rss  uint64  `json:"rss"`
+	Pcpu float32 `json:"pcpu"`
+
+	Rport int `json:"rport"`
+	Dport int `json:"dport"`
+	Hport int `json:"hport"`
+}
+
+// raftServer tracks the information about a single server in a configuration.
+type raftServer struct {
+	// Suffrage determines whether the server gets a vote.
+	Suffrage raft.ServerSuffrage `json:"suffrage"`
+	// ID is a unique string identifying this server for all time.
+	ID raft.ServerID `json:"id"`
+	// Address is its network address that a transport can contact.
+	Address raft.ServerAddress `json:"address"`
 }
 
 // ServeRaft services the raft http api.
@@ -127,13 +143,19 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 	nodes := n.GetRaftNodes(raftServers)
 	leaderAddr, leaderID := n.Raft.LeaderWithID()
 	ctx.JSON(http.StatusOK, gin.H{
-		"Leader":        leaderAddr,
-		"LeaderID":      leaderID,
-		"Nodes":         nodes,
-		"NodeNum":       len(nodes),
-		"Discovery":     n.DiscoveryName(),
-		"CurrentLeader": n.IsLeader(),
-		"RaftServers":   raftServers,
+		"leaderAddr":    leaderAddr,
+		"leaderID":      leaderID,
+		"nodes":         nodes,
+		"nodeNum":       len(nodes),
+		"discovery":     n.DiscoveryName(),
+		"currentLeader": n.IsLeader(),
+		"raftServers": lo.Map(raftServers, func(r raft.Server, index int) raftServer {
+			return raftServer{
+				Suffrage: r.Suffrage,
+				ID:       r.ID,
+				Address:  r.Address,
+			}
+		}),
 	})
 }
 
@@ -154,6 +176,8 @@ func (n *Node) GetRaftNodes(raftServers []raft.Server) (nodes []RaftNode) {
 		}
 
 		rid := ParseRaftID(rsp.ServerId)
+		ports := util.Pick1(sqids.New()).Decode(rid.Sqid)
+
 		nodes = append(nodes, RaftNode{
 			RaftID:  rid,
 			Address: string(server.Address), Leader: rsp.Leader,
@@ -176,6 +200,10 @@ func (n *Node) GetRaftNodes(raftServers []raft.Server) (nodes []RaftNode) {
 			BizData: json.RawMessage(rsp.BizData),
 
 			Addr: rsp.Addr,
+
+			Rport: int(ports[0]),
+			Dport: int(ports[1]),
+			Hport: int(ports[2]),
 		})
 	}
 	return
@@ -199,7 +227,7 @@ func (n *Node) ServeKV(ctx *gin.Context) {
 		MapName: ss.Or(getQuery(ctx, "map", "m"), "default"),
 		Key:     ss.Or(getQuery(ctx, "key", "k"), "default"),
 	}
-	ctx.Header("Braft-IP", strings.Join(n.RaftID.IP, ","))
+	ctx.Header("Braft-IP", n.RaftID.IP)
 	ctx.Header("Braft-ID", n.RaftID.ID)
 	ctx.Header("Braft-Host", n.RaftID.Hostname)
 	switch ctx.Request.Method {

@@ -3,11 +3,9 @@ package braft
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -35,6 +33,7 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
+	"github.com/sqids/sqids-go"
 	"github.com/vmihailenco/msgpack/v5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -84,10 +83,10 @@ type Config struct {
 
 // RaftID is the structure of node ID.
 type RaftID struct {
-	ID                  string
-	Hostname            string
-	IP                  []string
-	Rport, Dport, Hport int
+	ID       string `json:"id"`
+	Hostname string `json:"hostname"`
+	IP       string `json:"ip"`
+	Sqid     string `json:"sqid"` // {Rport, Dport, Hport}
 }
 
 // NewNode returns an BRaft node.
@@ -108,15 +107,12 @@ func (n *Node) createNode() error {
 
 	log.Printf("node data dir: %s", conf.DataDir)
 
-	h, _ := os.Hostname()
-	_, ips := goip.MainIP()
 	raftID := RaftID{
-		ID:       ksuid.New().String(),
-		Rport:    EnvRport,
-		Dport:    EnvDport,
-		Hport:    EnvHport,
-		Hostname: h,
-		IP:       ips,
+		ID: ksuid.New().String(),
+		Sqid: util.Pick1(util.Pick1(sqids.New()).Encode(
+			[]uint64{uint64(EnvRport), uint64(EnvDport), uint64(EnvHport)})),
+		Hostname: util.Pick1(os.Hostname()),
+		IP:       util.Pick1(goip.MainIP()),
 	}
 
 	raftIDMsg, _ := msgpack.Marshal(raftID)
@@ -153,19 +149,6 @@ func (n *Node) createNode() error {
 	// FSM 有限状态机
 	sm := fsm.NewRoutingFSM(raftID.ID, conf.Services, conf.TypeRegister)
 
-	memberConfig := memberlist.DefaultLocalConfig()
-
-	if privateIP, _ := sockaddr.GetPrivateIP(); privateIP == "" {
-		if allIPv4, _ := goip.ListAllIPv4(); len(allIPv4) > 0 {
-			memberConfig.AdvertiseAddr = allIPv4[0]
-			memberConfig.AdvertisePort = EnvDport
-		}
-	}
-
-	memberConfig.BindPort = EnvDport
-	memberConfig.Name = fmt.Sprintf("%s:%d", nodeID, EnvRport)
-	memberConfig.Logger = log.Default()
-
 	// default raft config
 	addr := fmt.Sprintf("%s:%d", EnvIP, EnvRport)
 	// grpc transport, Transport Raft节点之间的通信通道
@@ -184,7 +167,23 @@ func (n *Node) createNode() error {
 	n.Raft = raftServer
 	n.TransportManager = t
 	n.Conf = conf
-	n.memberConfig = memberConfig
+	n.memberConfig = func(nodeID string, dport, rport int) *memberlist.Config {
+		c := memberlist.DefaultLocalConfig()
+
+		// fix "get final advertise address: No private IP address found, and explicit IP not provided"
+		if privateIP, _ := sockaddr.GetPrivateIP(); privateIP == "" {
+			if allIPv4, _ := goip.ListAllIPv4(); len(allIPv4) > 0 {
+				c.AdvertiseAddr = allIPv4[0]
+				c.AdvertisePort = dport
+			}
+		}
+
+		c.BindPort = dport
+		c.Name = fmt.Sprintf("%s:%d", nodeID, rport)
+		c.Logger = log.Default()
+		return c
+	}(nodeID, EnvDport, EnvRport)
+
 	n.distributor = fsm.NewDistributor()
 	n.raftLogSum = &sm.RaftLogSum
 	n.addrQueue = util.NewUniqueQueue(100)
@@ -269,7 +268,7 @@ func (n *Node) start() (err error) {
 	n.goHandleDiscoveredNodes(discoveryChan)
 
 	// serve grpc
-	Go(n.wg, func() {
+	util.Go(n.wg, func() {
 		if err := n.GrpcServer.Serve(grpcListen); err != nil {
 			log.Printf("E! GrpcServer failed: %v", err)
 		}
@@ -280,7 +279,7 @@ func (n *Node) start() (err error) {
 		delayLeaderChanger := util.NewDelayWorker(n.wg, n.ctx, d, func(state NodeState, t time.Time) {
 			n.Conf.LeaderChange(n, state)
 		})
-		GoFor(n.ctx, n.wg, n.Raft.LeaderCh(), func(becameLeader bool) error {
+		util.GoChan(n.ctx, n.wg, n.Raft.LeaderCh(), func(becameLeader bool) error {
 			log.Printf("becameLeader: %v", becameLeader)
 			if becameLeader {
 				delayLeaderChanger.Notify(NodeLeader)
@@ -318,9 +317,9 @@ func (n *Node) Stop() {
 	}
 
 	n.Conf.Discovery.Stop()
-	// if err := n.mList.Leave(10 * time.Second); err != nil {
-	// 	log.Printf("Failed to leave from discovery: %q", err.Error())
-	// }
+	if err := n.mList.Leave(10 * time.Second); err != nil {
+		log.Printf("E! leave from discovery: %v", err)
+	}
 	if err := n.mList.Shutdown(); err != nil {
 		log.Printf("E! shutdown discovery failed: %v", err)
 	}
@@ -352,7 +351,7 @@ func (n *Node) findServer(serverID string) bool {
 
 // goHandleDiscoveredNodes handles the discovered Node additions
 func (n *Node) goHandleDiscoveredNodes(discoveryChan chan string) {
-	GoFor(n.ctx, n.wg, discoveryChan, func(peer string) error {
+	util.GoChan(n.ctx, n.wg, discoveryChan, func(peer string) error {
 		peerHost, port := util.Cut(peer, ":")
 		if port == "" {
 			peer = fmt.Sprintf("%s:%d", peerHost, EnvRport)
@@ -409,67 +408,17 @@ type NotifyEvent struct {
 	NotifyType
 }
 
-// Sleep is used to give the server time to unsubscribe the client and reset the stream
-func Sleep(d time.Duration) {
-	time.Sleep(d + time.Duration(rand.Int()%1000)*time.Microsecond)
-}
-
-// Go 开始一个协程
-func Go(wg *sync.WaitGroup, f func()) {
-	if wg != nil {
-		wg.Add(1)
-	}
-
-	go func() {
-		if wg != nil {
-			defer wg.Done()
-		}
-
-		f()
-	}()
-}
-
-// GoFor 开始一个协程，从 ch 读取数据，调用 f 进行处理
-func GoFor[T any](ctx context.Context, wg *sync.WaitGroup, ch <-chan T, f func(elem T) error) {
-	if wg != nil {
-		wg.Add(1)
-	}
-
-	go func() {
-		if wg != nil {
-			defer wg.Done()
-		}
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case elem, ok := <-ch:
-				if !ok { // closed
-					return
-				}
-				if err := f(elem); err != nil {
-					if errors.Is(err, io.EOF) {
-						return
-					}
-					log.Printf("E GoFor invoke fn failed: %v", err)
-				}
-			}
-		}
-	}()
-}
-
 func (n *Node) goDealNotifyEvent() {
 	waitLeader := make(chan NotifyEvent, 100)
 
-	GoFor(n.ctx, n.wg, n.notifyCh, func(e NotifyEvent) error {
+	util.GoChan(n.ctx, n.wg, n.notifyCh, func(e NotifyEvent) error {
 		n.processNotify(e, waitLeader)
 		return nil
 	})
 
 	waitLeaderTime := util.EnvDuration("BRAFT_RESTART_MIN", 90*time.Second)
 
-	GoFor(n.ctx, n.wg, waitLeader, func(e NotifyEvent) error {
+	util.GoChan(n.ctx, n.wg, waitLeader, func(e NotifyEvent) error {
 		leaderAddr, leaderID, err := n.waitLeader(waitLeaderTime)
 		if err != nil {
 			return err
@@ -572,7 +521,7 @@ func (n *Node) NotifyUpdate(node *memberlist.Node) {
 func (n *Node) IsLeader() bool { return n.Raft.VerifyLeader().Error() == nil }
 
 // RaftApply is used to apply any new logs to the raft cluster
-// this method does automatic forwarding to Leader Node
+// this method will do automatic forwarding to the Leader Node
 func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{}, error) {
 	payload, err := n.Conf.TypeRegister.Marshal(request)
 	if err != nil {
