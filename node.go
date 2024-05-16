@@ -369,7 +369,7 @@ func (n *Node) goHandleDiscoveredNodes(discoveryChan chan string) {
 		peerAddr := fmt.Sprintf("%s:%d", peerHost, rsp.DiscoveryPort)
 		log.Printf("join to cluster using discovery address: %s", peerAddr)
 		if _, err = n.mList.Join([]string{peerAddr}); err != nil {
-			log.Printf("W! failed to join to cluster using discovery address: %s", peerAddr)
+			log.Printf("W! join to cluster using discovery address: %s", peerAddr)
 		}
 
 		return nil
@@ -456,14 +456,15 @@ func (n *Node) processNotify(e NotifyEvent, waitLeader chan NotifyEvent) {
 		e.NotifyType, leader, isLeader, codec.Json(e.Node))
 	if leader != "" {
 		n.processNotifyAtLeader(isLeader, e)
-	} else {
-		select {
-		case waitLeader <- e:
-			log.Printf("current no leader, to wait list, type: %s, leader: %s, isLeader: %t, node: %s",
-				e.NotifyType, leader, isLeader, codec.Json(e.Node))
-		default:
-			log.Printf("too many waitLeaders")
-		}
+		return
+	}
+
+	select {
+	case waitLeader <- e:
+		log.Printf("current no leader, to wait list, type: %s, leader: %s, isLeader: %t, node: %s",
+			e.NotifyType, leader, isLeader, codec.Json(e.Node))
+	default:
+		log.Printf("too many waitLeaders")
 	}
 }
 
