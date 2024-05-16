@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/samber/lo"
+
 	"io"
 	"log"
 	"net"
@@ -86,7 +88,7 @@ type RaftID struct {
 	ID       string `json:"id"`
 	Hostname string `json:"hostname"`
 	IP       string `json:"ip"`
-	Sqid     string `json:"sqid"` // {Rport, Dport, Hport}
+	Sqid     string `json:"sqid"` // {RaftPort, Dport, Hport}
 }
 
 // NewNode returns an BRaft node.
@@ -281,11 +283,7 @@ func (n *Node) start() (err error) {
 		})
 		util.GoChan(n.ctx, n.wg, n.Raft.LeaderCh(), func(becameLeader bool) error {
 			log.Printf("becameLeader: %v", becameLeader)
-			if becameLeader {
-				delayLeaderChanger.Notify(NodeLeader)
-			} else {
-				delayLeaderChanger.Notify(NodeFollower)
-			}
+			delayLeaderChanger.Notify(lo.Ternary(becameLeader, NodeLeader, NodeFollower))
 			return nil
 		})
 	}
@@ -354,22 +352,14 @@ func (n *Node) goHandleDiscoveredNodes(discoveryChan chan string) {
 	util.GoChan(n.ctx, n.wg, discoveryChan, func(peer string) error {
 		peerHost, port := util.Cut(peer, ":")
 		if port == "" {
-			peer = fmt.Sprintf("%s:%d", peerHost, EnvRport)
-		}
-		rsp, err := GetPeerDetails(peer, 3*time.Second)
-		if err != nil {
-			log.Printf("E! GetPeerDetails %q failed: %v", peer, err)
-			return nil
+			peer = fmt.Sprintf("%s:%d", peerHost, EnvDport)
 		}
 
-		if n.findServer(rsp.ServerId) {
-			return nil
-		}
-
-		peerAddr := fmt.Sprintf("%s:%d", peerHost, rsp.DiscoveryPort)
-		log.Printf("join to cluster using discovery address: %s", peerAddr)
-		if _, err = n.mList.Join([]string{peerAddr}); err != nil {
-			log.Printf("W! join to cluster using discovery address: %s", peerAddr)
+		// format of peer should ip:port (the port is for discovery)
+		if _, err := n.mList.Join([]string{peer}); err != nil {
+			log.Printf("E! %s joined memberlist error: %v", peer, err)
+		} else {
+			log.Printf("%s joined memberlist successfully", peer)
 		}
 
 		return nil
@@ -478,7 +468,6 @@ func (n *Node) processNotifyAtLeader(isLeader bool, e NotifyEvent) {
 		n.join(e.Node)
 	case NotifyLeave:
 		n.leave(e.Node)
-	default:
 	}
 }
 
@@ -492,8 +481,8 @@ func (n *Node) leave(node *memberlist.Node) {
 }
 
 func (n *Node) join(node *memberlist.Node) {
-	nodeID, nodePort := util.Cut(node.Name, ":")
-	nodeAddr := fmt.Sprintf("%s:%s", node.Addr, nodePort)
+	nodeID, _ := util.Cut(node.Name, ":")
+	nodeAddr := fmt.Sprintf("%s:%d", node.Addr, node.Port-1)
 	if r := n.Raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(nodeAddr), 0, 0); r.Error() != nil {
 		log.Printf("raft node joined: %s, addr: %s error: %v", node.Name, nodeAddr, r.Error())
 	} else {

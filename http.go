@@ -14,6 +14,7 @@ import (
 	"github.com/bingoohuang/gg/pkg/v"
 	"github.com/bingoohuang/golog/pkg/ginlogrus"
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/samber/lo"
 	"github.com/sqids/sqids-go"
@@ -122,9 +123,9 @@ type RaftNode struct {
 	Rss  uint64  `json:"rss"`
 	Pcpu float32 `json:"pcpu"`
 
-	Rport int `json:"rport"`
-	Dport int `json:"dport"`
-	Hport int `json:"hport"`
+	RaftPort      int `json:"raftPort"`
+	DiscoveryPort int `json:"discoveryPort"`
+	HttpPort      int `json:"httpPort"`
 }
 
 // raftServer tracks the information about a single server in a configuration.
@@ -154,6 +155,13 @@ func (n *Node) ServeRaft(ctx *gin.Context) {
 				Suffrage: r.Suffrage,
 				ID:       r.ID,
 				Address:  r.Address,
+			}
+		}),
+		"memberList": lo.Map(n.mList.Members(), func(m *memberlist.Node, index int) any {
+			return map[string]any{
+				"name": m.Name,
+				"addr": m.Addr,
+				"port": m.Port,
 			}
 		}),
 	})
@@ -201,9 +209,9 @@ func (n *Node) GetRaftNodes(raftServers []raft.Server) (nodes []RaftNode) {
 
 			Addr: rsp.Addr,
 
-			Rport: int(ports[0]),
-			Dport: int(ports[1]),
-			Hport: int(ports[2]),
+			RaftPort:      int(ports[0]),
+			DiscoveryPort: int(ports[1]),
+			HttpPort:      int(ports[2]),
 		})
 	}
 	return

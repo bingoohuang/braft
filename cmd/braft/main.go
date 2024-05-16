@@ -139,5 +139,5 @@ Usage of %s:
   -init bool   create init ctl shell script`, os.Args[0])
 }
 
-// VersionInfo is optional for customized version.
+// VersionInfo is optional for a customized version.
 func (a Arg) VersionInfo() string { return v.Version() }

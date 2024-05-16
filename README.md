@@ -430,3 +430,100 @@ Content-Encoding: gzip
 3. `grpcui -plaintext localhost:15000`
 
 ![image](https://user-images.githubusercontent.com/1940588/154780806-bf7b88e3-27b8-416e-bbab-34be474e2db0.png)
+
+
+## 本机 static 双节点测试
+
+1. `BRAFT_DISCOVERY=192.168.6.240:15001,192.168.6.240:16001 BRAFT_RPORT=15000 braft`
+2. `BRAFT_DISCOVERY=192.168.6.240:15001,192.168.6.240:16001 BRAFT_RPORT=16000 braft`
+3. `gurl :15002/raft`
+
+```json
+{
+  "currentLeader": true,
+  "discovery": "static://192.168.6.240:15001,192.168.6.240:16001",
+  "leaderAddr": "192.168.6.240:15000",
+  "leaderID": "hKJJRLsyZ1hEdW1ISDlDZzFiU29JdWZ0RTJ5SEhraWOoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKw2WlZBZ0ZiMnh6aDc",
+  "memberList": [
+    {
+      "addr": "192.168.6.240",
+      "name": "hKJJRLsyZ1hEdW1ISDlDZzFiU29JdWZ0RTJ5SEhraWOoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKw2WlZBZ0ZiMnh6aDc:15000",
+      "port": 15001
+    },
+    {
+      "addr": "192.168.6.240",
+      "name": "hKJJRLsyZ1hEdzZxc1FlR3RDcEFoZkd1VmVmczc0VGWoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKxJaWZmdjJ1akIwVWw:16000",
+      "port": 16001
+    }
+  ],
+  "nodeNum": 2,
+  "nodes": [
+    {
+      "serverID": "hKJJRLsyZ1hEdW1ISDlDZzFiU29JdWZ0RTJ5SEhraWOoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKw2WlZBZ0ZiMnh6aDc",
+      "buildTime": "2024-05-16T12:53:58+0800",
+      "duration": "27.754114093s",
+      "address": "192.168.6.240:15000",
+      "raftState": "Leader",
+      "leader": "192.168.6.240:15000",
+      "appVersion": "1.0.0",
+      "startTime": "2024-05-16T12:54:13.278255+08:00",
+      "goVersion": "go1.22.3_darwin/amd64",
+      "gitCommit": "master-e97f6f2@2024-05-16T09:05:54+08:00",
+      "discoveryNodes": ["192.168.6.240:15001", "192.168.6.240:16001"],
+      "addr": ["192.168.6.240:15000"],
+      "raftID": {
+        "id": "2gXDumHH9Cg1bSoIuftE2yHHkic",
+        "hostname": "bingoodeMBP.lan",
+        "ip": "192.168.6.240",
+        "sqid": "6ZVAgFb2xzh7"
+      },
+      "raftLogSum": 0,
+      "pid": 19026,
+      "rss": 31629312,
+      "pcpu": 0.3,
+      "raftPort": 15000,
+      "discoveryPort": 15001,
+      "httpPort": 15002
+    },
+    {
+      "serverID": "hKJJRLsyZ1hEdzZxc1FlR3RDcEFoZkd1VmVmczc0VGWoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKxJaWZmdjJ1akIwVWw",
+      "buildTime": "2024-05-16T12:53:58+0800",
+      "duration": "16.927061744s",
+      "address": "192.168.6.240:16000",
+      "raftState": "Follower",
+      "leader": "192.168.6.240:15000",
+      "appVersion": "1.0.0",
+      "startTime": "2024-05-16T12:54:24.114572+08:00",
+      "goVersion": "go1.22.3_darwin/amd64",
+      "gitCommit": "master-e97f6f2@2024-05-16T09:05:54+08:00",
+      "discoveryNodes": ["192.168.6.240:15001", "192.168.6.240:16001"],
+      "addr": ["192.168.6.240:16000"],
+      "raftID": {
+        "id": "2gXDw6qsQeGtCpAhfGuVefs74Te",
+        "hostname": "bingoodeMBP.lan",
+        "ip": "192.168.6.240",
+        "sqid": "Iiffv2ujB0Ul"
+      },
+      "raftLogSum": 0,
+      "pid": 19162,
+      "rss": 30310400,
+      "pcpu": 0.2,
+      "raftPort": 16000,
+      "discoveryPort": 16001,
+      "httpPort": 16002
+    }
+  ],
+  "raftServers": [
+    {
+      "suffrage": 0,
+      "id": "hKJJRLsyZ1hEdW1ISDlDZzFiU29JdWZ0RTJ5SEhraWOoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKw2WlZBZ0ZiMnh6aDc",
+      "address": "192.168.6.240:15000"
+    },
+    {
+      "suffrage": 0,
+      "id": "hKJJRLsyZ1hEdzZxc1FlR3RDcEFoZkd1VmVmczc0VGWoSG9zdG5hbWWvYmluZ29vZGVNQlAubGFuoklQrTE5Mi4xNjguNi4yNDCkU3FpZKxJaWZmdjJ1akIwVWw",
+      "address": "192.168.6.240:16000"
+    }
+  ]
+}
+```
