@@ -492,7 +492,7 @@ func (n *Node) processNotifyAtLeader(isLeader bool, e NotifyEvent) {
 func (n *Node) leave(node *memberlist.Node) {
 	nodeID, _ := util.Cut(node.Name, ":")
 	if r := n.Raft.RemoveServer(raft.ServerID(nodeID), 0, 0); r.Error() != nil {
-		log.Printf("raft node left: %s, addr: %s error: %v", node.Name, node.Addr, r.Error())
+		log.Printf("E! raft node left: %s, addr: %s, error: %v", node.Name, node.Addr, r.Error())
 	} else {
 		log.Printf("raft node left: %s, addr: %s sucessfully", node.Name, node.Addr)
 	}
@@ -502,7 +502,7 @@ func (n *Node) join(node *memberlist.Node) {
 	nodeID, _ := util.Cut(node.Name, ":")
 	nodeAddr := fmt.Sprintf("%s:%d", node.Addr, node.Port-1)
 	if r := n.Raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(nodeAddr), 0, 0); r.Error() != nil {
-		log.Printf("raft node joined: %s, addr: %s error: %v", node.Name, nodeAddr, r.Error())
+		log.Printf("E! raft node joined: %s, addr: %s, error: %v", node.Name, nodeAddr, r.Error())
 	} else {
 		log.Printf("raft node joined: %s, addr: %s sucessfully", node.Name, nodeAddr)
 	}
