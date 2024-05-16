@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/samber/lo"
+	"os/signal"
+	"syscall"
 
 	"io"
 	"log"
@@ -196,12 +198,27 @@ func (n *Node) createNode() error {
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
 func (n *Node) Start() (err error) {
+	var exitBool atomic.Bool
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		n.Stop()
+		exitBool.Store(true)
+	}()
+
 	for {
 		if err := n.start(); err != nil {
 			return err
 		}
 
 		n.wait()
+
+		if exitBool.Load() {
+			// 等待10秒，等待 memberlist leave node
+			time.Sleep(10 * time.Second)
+			return fmt.Errorf("cancelled")
+		}
 
 		if err = n.createNode(); err != nil {
 			log.Printf("restart failed: %v", err)
@@ -308,7 +325,6 @@ func (n *Node) Stop() {
 	}
 
 	log.Print("Stopping Node...")
-	n.cancelFunc()
 
 	if n.Conf.LeaderChange != nil {
 		n.Conf.LeaderChange(n, NodeShuttingDown)
@@ -328,6 +344,8 @@ func (n *Node) Stop() {
 	log.Print("Raft stopped")
 	n.GrpcServer.Stop()
 	log.Print("GrpcServer Server stopped")
+
+	n.cancelFunc()
 
 	if n.httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -398,6 +416,8 @@ type NotifyEvent struct {
 	NotifyType
 }
 
+var waitLeaderTime = util.EnvDuration("BRAFT_RESTART_MIN", 90*time.Second)
+
 func (n *Node) goDealNotifyEvent() {
 	waitLeader := make(chan NotifyEvent, 100)
 
@@ -405,8 +425,6 @@ func (n *Node) goDealNotifyEvent() {
 		n.processNotify(e, waitLeader)
 		return nil
 	})
-
-	waitLeaderTime := util.EnvDuration("BRAFT_RESTART_MIN", 90*time.Second)
 
 	util.GoChan(n.ctx, n.wg, waitLeader, func(e NotifyEvent) error {
 		leaderAddr, leaderID, err := n.waitLeader(waitLeaderTime)
@@ -435,7 +453,7 @@ func (n *Node) waitLeader(minWait time.Duration) (leaderAddr, leaderID string, e
 			return "", "", io.EOF
 		}
 
-		util.Think("3-5s", "wait for leader")
+		util.Think("10-20s", "wait for leader")
 	}
 }
 
