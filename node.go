@@ -277,7 +277,7 @@ func (n *Node) start() (err error) {
 	n.wg = &sync.WaitGroup{}
 
 	// discovery method
-	discoveryChan, err := n.Conf.Discovery.Start(n.ID, EnvRport)
+	discoveryChan, err := n.Conf.Discovery.Start(n.ID, EnvDport)
 	if err != nil {
 		return err
 	}
