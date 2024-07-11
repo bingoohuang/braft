@@ -245,7 +245,7 @@ func (n *Node) ServeKV(ctx *gin.Context) {
 	case http.MethodGet:
 		req.KvOperate = fsm.KvGet
 		for _, service := range n.Conf.Services {
-			if m, ok := service.(fsm.KvExectable); ok {
+			if m, ok := service.(fsm.KvExecutable); ok {
 				ctx.JSON(http.StatusOK, m.Exec(req))
 				return
 			}

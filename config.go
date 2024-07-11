@@ -44,7 +44,7 @@ type NodeStateChanger func(n *Node, nodeState NodeState)
 func WithLeaderChange(s NodeStateChanger) ConfigFn { return func(c *Config) { c.LeaderChange = s } }
 
 // WithBizData specifies the biz data of current node for the node for /raft api .
-func WithBizData(s func() interface{}) ConfigFn { return func(c *Config) { c.BizData = s } }
+func WithBizData(s func() any) ConfigFn { return func(c *Config) { c.BizData = s } }
 
 // WithServices specifies the services for the FSM.
 func WithServices(s ...fsm.Service) ConfigFn { return func(c *Config) { c.Services = s } }

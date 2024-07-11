@@ -31,9 +31,9 @@ func main() {
 
 	node, err := braft.NewNode(
 		braft.WithServices(fsm.NewMemKvService(), fsm.NewDistributeService(dh)),
-		braft.WithLeaderChange(func(n *braft.Node, nodeState braft.NodeState) {
-			log.Printf("nodeState: %s", nodeState)
-			if nodeState == braft.NodeLeader {
+		braft.WithLeaderChange(func(n *braft.Node, s braft.NodeState) {
+			log.Printf("nodeState: %s", s)
+			if s == braft.NodeLeader {
 				t.Start(func() {
 					log.Printf("ticker ticker, I'm %s, nodeIds: %v", n.Raft.State(), n.ShortNodeIds())
 				})
@@ -68,11 +68,11 @@ type DemoDist struct {
 	Items  []DemoItem
 }
 
-func (d *DemoDist) GetDistributableItems() interface{} { return d.Items }
+func (d *DemoDist) GetDistributableItems() any { return d.Items }
 
 type DemoPicker struct{ DD *DemoDist }
 
-func (d *DemoPicker) PickForNode(nodeID string, request interface{}) {
+func (d *DemoPicker) PickForNode(nodeID string, request any) {
 	dd := request.(*DemoDist)
 	dd.Items = funk.Filter(dd.Items, func(item DemoItem) bool {
 		return item.NodeID == nodeID

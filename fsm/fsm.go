@@ -11,7 +11,7 @@ type SubDataTypeAware interface {
 }
 
 type SubDataAware interface {
-	GetSubData() interface{}
+	GetSubData() any
 }
 
 var (
@@ -23,13 +23,13 @@ var (
 type Service interface {
 	// NewLog is called when a new raft log message is committed in the cluster and matched with any of the GetReqDataTypes returned types
 	// in this method we can handle what should happen when we got a new raft log regarding our FSM service
-	NewLog(shortNodeID string, request interface{}) interface{}
+	NewLog(shortNodeID string, request any) any
 
 	// GetReqDataType returns all the request structs which are used by this FSMService
-	GetReqDataType() interface{}
+	GetReqDataType() any
 
 	// ApplySnapshot is used to decode and apply a snapshot to the FSMService
-	ApplySnapshot(shortNodeID string, input interface{}) error
+	ApplySnapshot(shortNodeID string, input any) error
 
 	MarshalTypesRegister
 }

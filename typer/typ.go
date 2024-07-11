@@ -3,7 +3,7 @@ package typer
 import "reflect"
 
 // SameType tells whether the type of v1 and v2 is the same, ignoring the pointer.
-func SameType(v1, v2 interface{}) bool {
+func SameType(v1, v2 any) bool {
 	typ1 := reflect.TypeOf(v1)
 	typ2 := reflect.TypeOf(v2)
 	if typ1 == typ2 {
@@ -22,7 +22,7 @@ func SameType(v1, v2 interface{}) bool {
 }
 
 // ConvertibleTo reports whether data can be converted target type.
-func ConvertibleTo(data interface{}, u reflect.Type) (interface{}, bool) {
+func ConvertibleTo(data any, u reflect.Type) (any, bool) {
 	v1 := reflect.ValueOf(data)
 	t1 := v1.Type()
 

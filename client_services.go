@@ -81,7 +81,7 @@ func (s *ClientGrpcServices) GetDetails(_ context.Context, r *proto.GetDetailsRe
 	}, nil
 }
 
-func createBizData(f func() interface{}) string {
+func createBizData(f func() any) string {
 	if f == nil {
 		return ""
 	}

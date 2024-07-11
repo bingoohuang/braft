@@ -11,10 +11,10 @@ import (
 // Marshaler interface is to provide serialize and deserialize methods for BRaft Node
 type Marshaler interface {
 	// Marshal is used to serialize and data to a []byte
-	Marshal(data interface{}) ([]byte, error)
+	Marshal(data any) ([]byte, error)
 
-	// Unmarshal is used to deserialize []byte to interface{}
-	Unmarshal(data []byte, v interface{}) error
+	// Unmarshal is used to deserialize []byte to any
+	Unmarshal(data []byte, v any) error
 }
 
 type Data struct {
@@ -64,7 +64,7 @@ func (t *TypeRegister) RegisterType(typ reflect.Type) (typName string, isPtr boo
 
 var ErrUnknownType = errors.New("unknown type")
 
-func (t *TypeRegister) Unmarshal(data []byte) (interface{}, error) {
+func (t *TypeRegister) Unmarshal(data []byte) (any, error) {
 	wrap := Data{}
 	if err := t.Marshaler.Unmarshal(data, &wrap); err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ type TypeRegisterUnmarshalerAdapter interface {
 	Unmarshal(*TypeRegister, []byte) error
 }
 
-func (t *TypeRegister) Marshal(data interface{}) ([]byte, error) {
+func (t *TypeRegister) Marshal(data any) ([]byte, error) {
 	payload, err := func() ([]byte, error) {
 		if adapter, ok := data.(TypeRegisterMarshalerAdapter); ok {
 			return adapter.Marshal(t)

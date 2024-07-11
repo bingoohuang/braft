@@ -19,7 +19,7 @@ import (
 )
 
 // ApplyOnLeader apply a payload on the leader node.
-func (n *Node) ApplyOnLeader(payload []byte, timeout time.Duration) (interface{}, error) {
+func (n *Node) ApplyOnLeader(payload []byte, timeout time.Duration) (any, error) {
 	addr, _ := n.Raft.LeaderWithID()
 	if addr == "" {
 		return nil, errors.New("unknown leader")

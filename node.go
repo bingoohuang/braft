@@ -80,7 +80,7 @@ type Config struct {
 	Discovery     discovery.Discovery
 	Services      []fsm.Service
 	LeaderChange  NodeStateChanger
-	BizData       func() interface{}
+	BizData       func() any
 	HTTPConfigFns []HTTPConfigFn
 	EnableHTTP    bool
 }
@@ -530,7 +530,7 @@ func (n *Node) IsLeader() bool { return n.Raft.VerifyLeader().Error() == nil }
 
 // RaftApply is used to apply any new logs to the raft cluster
 // this method will do automatic forwarding to the Leader Node
-func (n *Node) RaftApply(request interface{}, timeout time.Duration) (interface{}, error) {
+func (n *Node) RaftApply(request any, timeout time.Duration) (any, error) {
 	payload, err := n.Conf.TypeRegister.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -575,7 +575,7 @@ func ParseRaftID(s string) (rid RaftID) {
 }
 
 // Distribute distributes the given bean to all the nodes in the cluster.
-func (n *Node) Distribute(bean fsm.Distributable) (interface{}, error) {
+func (n *Node) Distribute(bean fsm.Distributable) (any, error) {
 	items := bean.GetDistributableItems()
 	dataLen := n.distributor.Distribute(n.ShortNodeIds(), items)
 
@@ -594,7 +594,7 @@ type logger struct{}
 func (l *logger) GetLevel() hclog.Level { return hclog.Debug }
 
 // Log Emit a message and key/value pairs at a provided log level
-func (l *logger) Log(level hclog.Level, msg string, args ...interface{}) {
+func (l *logger) Log(level hclog.Level, msg string, args ...any) {
 	for i, arg := range args {
 		// Convert the field value to a string.
 		switch st := arg.(type) {
@@ -611,7 +611,7 @@ func (l *logger) Log(level hclog.Level, msg string, args ...interface{}) {
 		}
 	}
 
-	v := append([]interface{}{"D!", msg}, args...)
+	v := append([]any{"D!", msg}, args...)
 
 	switch {
 	case level <= hclog.Debug:
@@ -639,11 +639,11 @@ func logPrint(a []any) string {
 	return string(buf)
 }
 
-func (l *logger) Trace(msg string, args ...interface{}) { l.Log(hclog.Trace, msg, args...) }
-func (l *logger) Debug(msg string, args ...interface{}) { l.Log(hclog.Debug, msg, args...) }
-func (l *logger) Info(msg string, args ...interface{})  { l.Log(hclog.Info, msg, args...) }
-func (l *logger) Warn(msg string, args ...interface{})  { l.Log(hclog.Warn, msg, args...) }
-func (l *logger) Error(msg string, args ...interface{}) { l.Log(hclog.Error, msg, args...) }
+func (l *logger) Trace(msg string, args ...any) { l.Log(hclog.Trace, msg, args...) }
+func (l *logger) Debug(msg string, args ...any) { l.Log(hclog.Debug, msg, args...) }
+func (l *logger) Info(msg string, args ...any)  { l.Log(hclog.Info, msg, args...) }
+func (l *logger) Warn(msg string, args ...any)  { l.Log(hclog.Warn, msg, args...) }
+func (l *logger) Error(msg string, args ...any) { l.Log(hclog.Error, msg, args...) }
 
 func (l *logger) IsTrace() bool { return false }
 func (l *logger) IsDebug() bool { return false }
@@ -651,12 +651,12 @@ func (l *logger) IsInfo() bool  { return false }
 func (l *logger) IsWarn() bool  { return false }
 func (l *logger) IsError() bool { return false }
 
-func (l *logger) ImpliedArgs() []interface{}       { return nil }
-func (l *logger) With(...interface{}) hclog.Logger { return l }
-func (l *logger) Name() string                     { return "" }
-func (l *logger) Named(string) hclog.Logger        { return l }
-func (l *logger) ResetNamed(string) hclog.Logger   { return l }
-func (l *logger) SetLevel(hclog.Level)             {}
+func (l *logger) ImpliedArgs() []any             { return nil }
+func (l *logger) With(...any) hclog.Logger       { return l }
+func (l *logger) Name() string                   { return "" }
+func (l *logger) Named(string) hclog.Logger      { return l }
+func (l *logger) ResetNamed(string) hclog.Logger { return l }
+func (l *logger) SetLevel(hclog.Level)           {}
 
 func (l *logger) StandardLogger(*hclog.StandardLoggerOptions) *log.Logger { return nil }
 func (l *logger) StandardWriter(*hclog.StandardLoggerOptions) io.Writer   { return nil }

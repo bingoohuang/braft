@@ -36,7 +36,7 @@ func NewRoutingFSM(shortNodeID string, services []Service, ser *marshal.TypeRegi
 	return i
 }
 
-func (i *FSM) Apply(raftlog *raft.Log) interface{} {
+func (i *FSM) Apply(raftlog *raft.Log) any {
 	log.Printf("FSM Apply LogType: %s", raftlog.Type)
 
 	if raftlog.Type == raft.LogCommand {
@@ -101,7 +101,7 @@ func MakeReqTypeInfo(service Service) ReqTypeInfo {
 	return ReqTypeInfo{Service: service, ReqType: t}
 }
 
-func getTargetTypeInfo(types []ReqTypeInfo, result interface{}) (ReqTypeInfo, error) {
+func getTargetTypeInfo(types []ReqTypeInfo, result any) (ReqTypeInfo, error) {
 	resultType := reflect.TypeOf(result)
 	var typs []ReqTypeInfo
 	for _, typ := range types {

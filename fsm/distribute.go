@@ -9,7 +9,7 @@ import (
 
 // Distributable enable the distribution of struct.
 type Distributable interface {
-	GetDistributableItems() interface{}
+	GetDistributableItems() any
 }
 
 // DistributableItem gives the ID getter.
@@ -34,7 +34,7 @@ func NewDistributor() *Distributor {
 }
 
 // Distribute do the distribution.
-func (d *Distributor) Distribute(shortNodeIds []string, data interface{}) int {
+func (d *Distributor) Distribute(shortNodeIds []string, data any) int {
 	d.cleanKeysNotIn(shortNodeIds)
 
 	dv := reflect.ValueOf(data)
@@ -146,12 +146,12 @@ func (m *DistributeService) RegisterMarshalTypes(reg *marshal.TypeRegister) {
 	m.Picker.RegisterMarshalTypes(reg)
 }
 
-func (m *DistributeService) ApplySnapshot(nodeID string, input interface{}) error {
+func (m *DistributeService) ApplySnapshot(nodeID string, input any) error {
 	log.Printf("DistributeService ApplySnapshot req: %+v", input)
 	return nil
 }
 
-func (m *DistributeService) NewLog(nodeID string, request interface{}) interface{} {
+func (m *DistributeService) NewLog(nodeID string, request any) any {
 	log.Printf("DistributeService NewLog req: %+v", request)
 
 	req := request.(DistributeRequest)
@@ -160,26 +160,26 @@ func (m *DistributeService) NewLog(nodeID string, request interface{}) interface
 	return nil
 }
 
-func (m *DistributeService) GetReqDataType() interface{} { return DistributeRequest{} }
+func (m *DistributeService) GetReqDataType() any { return DistributeRequest{} }
 
 type DistributeRequest struct {
-	Data interface{}
+	Data any
 }
 
 var _ marshal.TypeRegisterMarshalerAdapter = (*DistributeRequest)(nil)
 
 func (s DistributeRequest) Marshal(t *marshal.TypeRegister) ([]byte, error) { return t.Marshal(s.Data) }
-func (s DistributeRequest) GetSubData() interface{}                         { return s.Data }
+func (s DistributeRequest) GetSubData() any                                 { return s.Data }
 func (s *DistributeRequest) Unmarshal(t *marshal.TypeRegister, d []byte) (err error) {
 	s.Data, err = t.Unmarshal(d)
 	return
 }
 
 type Picker interface {
-	PickForNode(node string, request interface{})
+	PickForNode(node string, request any)
 	MarshalTypesRegister
 }
 
-type PickerFn func(node string, request interface{})
+type PickerFn func(node string, request any)
 
-func (f PickerFn) PickForNode(node string, request interface{}) { f(node, request) }
+func (f PickerFn) PickForNode(node string, request any) { f(node, request) }
