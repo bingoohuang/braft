@@ -18,3 +18,8 @@ Usage
    2. `curl 'http://localhost:16002/kv?map=test&k=somekey'`
    3. `curl 'http://localhost:17002/kv?map=test&k=somekey'`
 5. Distribute some items `gurl POST :15002/distribute`
+
+本机启动两个节点:
+
+1. `BRAFT_DISCOVERY=192.168.31.249:15001,192.168.31.249:16001 BRAFT_RPORT=15000 braft`
+2. `BRAFT_DISCOVERY=192.168.31.249:15001,192.168.31.249:16001 BRAFT_RPORT=16000 braft`
