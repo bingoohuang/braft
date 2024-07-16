@@ -3,21 +3,20 @@ package braft
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"github.com/samber/lo"
-	"os/signal"
-	"syscall"
-
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	transport "github.com/Jille/raft-grpc-transport"
@@ -35,12 +34,12 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
+	"github.com/samber/lo"
 	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
 	"github.com/sqids/sqids-go"
 	"github.com/vmihailenco/msgpack/v5"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -75,22 +74,35 @@ type Node struct {
 
 // Config is the configuration of the node.
 type Config struct {
-	TypeRegister  *marshal.TypeRegister
-	DataDir       string
-	Discovery     discovery.Discovery
-	Services      []fsm.Service
-	LeaderChange  NodeStateChanger
-	BizData       func() any
-	HTTPConfigFns []HTTPConfigFn
-	EnableHTTP    bool
+	TypeRegister    *marshal.TypeRegister
+	DataDir         string
+	Discovery       discovery.Discovery
+	Services        []fsm.Service
+	LeaderChange    NodeStateChanger
+	BizData         func() any
+	HTTPConfigFns   []HTTPConfigFn
+	EnableHTTP      bool
+	GrpcDialOptions []grpc.DialOption
+	// Raft 监听IP
+	RaftListenIP string
+	// Rport Raft 监听端口值
+	Rport int
+	// Dport Discovery 端口值
+	Dport int
+	// Hport HTTP 端口值
+	Hport int
+	// Raft ServiceID
+	ServerID string
 }
 
 // RaftID is the structure of node ID.
 type RaftID struct {
-	ID       string `json:"id"`
-	Hostname string `json:"hostname"`
-	IP       string `json:"ip"`
-	Sqid     string `json:"sqid"` // {RaftPort, Dport, Hport}
+	ID         string `json:"id,omitempty"`
+	Hostname   string `json:"hostname,omitempty"`
+	IP         string `json:"ip,omitempty"`
+	Sqid       string `json:"sqid,omitempty"` // {RaftPort, Dport, Hport}
+	ServerID   string `json:"serverID,omitempty"`
+	ServerAddr string `json:"serverAddr,omitempty"`
 }
 
 // NewNode returns an BRaft node.
@@ -101,6 +113,36 @@ func NewNode(fns ...ConfigFn) (*Node, error) {
 	}
 
 	return node, nil
+}
+
+func UnmarshRaftID(serverID string) (*RaftID, error) {
+	decoded, err := base64.RawURLEncoding.DecodeString(serverID)
+	if err != nil {
+		return nil, err
+	}
+
+	var raftID RaftID
+	if err := msgpack.Unmarshal(decoded, &raftID); err != nil {
+		return nil, err
+	}
+	return &raftID, nil
+}
+
+var ErrNoLeader = errors.New("no leader found")
+
+func (n *Node) Leader() (*RaftID, error) {
+	leader, id := n.Raft.LeaderWithID()
+	if id == "" {
+		return nil, ErrNoLeader
+	}
+
+	raftID, err := UnmarshRaftID(string(id))
+	if err != nil {
+		return nil, err
+	}
+
+	raftID.ServerAddr = string(leader)
+	return raftID, nil
 }
 
 func (n *Node) createNode() error {
@@ -114,9 +156,10 @@ func (n *Node) createNode() error {
 	raftID := RaftID{
 		ID: ksuid.New().String(),
 		Sqid: util.Pick1(util.Pick1(sqids.New()).Encode(
-			[]uint64{uint64(EnvRport), uint64(EnvDport), uint64(EnvHport)})),
+			[]uint64{uint64(conf.Rport), uint64(conf.Dport), uint64(conf.Hport)})),
 		Hostname: util.Pick1(os.Hostname()),
 		IP:       util.Pick1(goip.MainIP()),
+		ServerID: conf.ServerID,
 	}
 
 	raftIDMsg, _ := msgpack.Marshal(raftID)
@@ -154,10 +197,9 @@ func (n *Node) createNode() error {
 	sm := fsm.NewRoutingFSM(raftID.ID, conf.Services, conf.TypeRegister)
 
 	// default raft config
-	addr := fmt.Sprintf("%s:%d", EnvIP, EnvRport)
+	addr := fmt.Sprintf("%s:%d", conf.RaftListenIP, conf.Rport)
 	// grpc transport, Transport Raft节点之间的通信通道
-	t := transport.New(raft.ServerAddress(addr),
-		[]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())})
+	t := transport.New(raft.ServerAddress(addr), conf.GrpcDialOptions)
 
 	// raft server
 	raftServer, err := raft.NewRaft(raftConf, sm, logStore, stableStore, snapshotStore, t.Transport())
@@ -167,7 +209,7 @@ func (n *Node) createNode() error {
 
 	n.ID = nodeID
 	n.RaftID = raftID
-	n.addr = fmt.Sprintf(":%d", EnvRport)
+	n.addr = fmt.Sprintf(":%d", conf.Rport)
 	n.Raft = raftServer
 	n.TransportManager = t
 	n.Conf = conf
@@ -186,7 +228,7 @@ func (n *Node) createNode() error {
 		c.Name = fmt.Sprintf("%s:%d", nodeID, rport)
 		c.Logger = log.Default()
 		return c
-	}(nodeID, EnvDport, EnvRport)
+	}(nodeID, conf.Dport, conf.Rport)
 
 	n.distributor = fsm.NewDistributor()
 	n.raftLogSum = &sm.RaftLogSum
@@ -232,7 +274,7 @@ func (n *Node) Start() (err error) {
 func (n *Node) start() (err error) {
 	n.StartTime = time.Now()
 	log.Printf("Node starting, rport: %d, dport: %d, hport: %d, discovery: %s",
-		EnvRport, EnvDport, EnvHport, n.DiscoveryName())
+		n.Conf.Rport, n.Conf.Dport, n.Conf.Hport, n.DiscoveryName())
 
 	// 防止各个节点同时启动太快，随机休眠
 	util.Think(ss.Or(util.Env("BRAFT_SLEEP", "BSL"), "10ms-15s"), "")
@@ -277,7 +319,7 @@ func (n *Node) start() (err error) {
 	n.wg = &sync.WaitGroup{}
 
 	// discovery method
-	discoveryChan, err := n.Conf.Discovery.Start(n.ID, EnvDport)
+	discoveryChan, err := n.Conf.Discovery.Start(n.ID, n.Conf.Dport)
 	if err != nil {
 		return err
 	}
@@ -370,7 +412,7 @@ func (n *Node) goHandleDiscoveredNodes(discoveryChan chan string) {
 	util.GoChan(n.ctx, n.wg, discoveryChan, func(peer string) error {
 		peerHost, port := util.Cut(peer, ":")
 		if port == "" {
-			peer = fmt.Sprintf("%s:%d", peerHost, EnvDport)
+			peer = fmt.Sprintf("%s:%d", peerHost, n.Conf.Dport)
 		}
 
 		// format of peer should ip:port (the port is for discovery)

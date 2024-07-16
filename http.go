@@ -73,7 +73,7 @@ func (n *Node) runHTTP(fs ...HTTPConfigFn) {
 	}
 
 	n.httpServer = &http.Server{
-		Addr:    fmt.Sprintf(":%d", EnvHport),
+		Addr:    fmt.Sprintf(":%d", n.Conf.Hport),
 		Handler: r,
 	}
 

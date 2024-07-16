@@ -7,6 +7,8 @@ import (
 	"github.com/bingoohuang/braft/fsm"
 	"github.com/bingoohuang/braft/marshal"
 	"github.com/bingoohuang/braft/util"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // ConfigFn is the function option pattern for the NodeConfig.
@@ -73,8 +75,51 @@ func WithHTTPFns(s ...HTTPConfigFn) ConfigFn {
 	}
 }
 
+// WithGrpcDialOptions specifies the grpc options.
+func WithGrpcDialOptions(options ...grpc.DialOption) ConfigFn {
+	return func(c *Config) {
+		c.GrpcDialOptions = options
+	}
+}
+
+// WithRaftPort specifies the raft port.
+func WithRaftPort(port int) ConfigFn {
+	return func(c *Config) {
+		c.Rport = port
+	}
+}
+
+// WithDiscoveryPort specifies the discovery port.
+func WithDiscoveryPort(port int) ConfigFn {
+	return func(c *Config) {
+		c.Dport = port
+	}
+}
+
+// WithHttpPort specifies the http port.
+func WithHttpPort(port int) ConfigFn {
+	return func(c *Config) {
+		c.Hport = port
+	}
+}
+
+// WithServerID specifies the RaftID.
+func WithServerID(serverID string) ConfigFn {
+	return func(c *Config) {
+		c.ServerID = serverID
+	}
+}
+
 func createConfig(fns []ConfigFn) (*Config, error) {
-	conf := &Config{}
+	conf := &Config{
+		GrpcDialOptions: []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		},
+		RaftListenIP: EnvIP,
+		Rport:        EnvRport,
+		Dport:        EnvDport,
+		Hport:        EnvHport,
+	}
 	for _, f := range fns {
 		f(conf)
 	}

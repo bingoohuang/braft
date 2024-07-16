@@ -134,8 +134,17 @@ type Snapshot struct {
 
 func newSnapshot(fsm *FSM) raft.FSMSnapshot { return &Snapshot{fsm: fsm} }
 
+type BeforeSnapshotAware interface {
+	BeforeSnapshot()
+}
+
 func (i *Snapshot) Persist(sink raft.SnapshotSink) error {
 	i.Lock()
+	for _, ser := range i.fsm.services {
+		if s, ok := ser.(BeforeSnapshotAware); ok {
+			s.BeforeSnapshot()
+		}
+	}
 	snapshotData, err := i.fsm.ser.Marshal(i.fsm.services)
 	if err != nil {
 		return err

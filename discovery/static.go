@@ -28,7 +28,7 @@ func (k *staticDiscovery) Start(_ string, _ int) (chan string, error) {
 		for _, peer := range k.Peers {
 			k.discoveryChan <- peer
 		}
-		close(k.discoveryChan)
+		//close(k.discoveryChan)
 	}()
 	return k.discoveryChan, nil
 }
