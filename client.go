@@ -13,6 +13,7 @@ import (
 	"github.com/bingoohuang/braft/util"
 	"github.com/bingoohuang/gg/pkg/goip"
 	"github.com/bingoohuang/gg/pkg/ss"
+	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -111,6 +112,17 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 		peers := ss.Split(s, ss.WithSeps(","), ss.WithIgnoreEmpty(true), ss.WithTrimSpace(true))
 		if len(peers) == 0 {
 			peers = DefaultStaticPeers
+		}
+
+		if _, found := lo.Find(peers, func(p string) bool {
+			return strings.HasPrefix(p, ":")
+		}); found {
+			hostIP := util.MustHostIP()
+			for i, p := range peers {
+				if strings.HasPrefix(p, ":") {
+					peers[i] = hostIP + p
+				}
+			}
 		}
 
 		return discovery.NewStaticDiscovery(peers)

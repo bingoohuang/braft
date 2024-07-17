@@ -1,6 +1,9 @@
 package discovery
 
-import "strings"
+import (
+	"context"
+	"strings"
+)
 
 type staticDiscovery struct {
 	discoveryChan chan string
@@ -21,14 +24,15 @@ func (k *staticDiscovery) Search() (dest []string, err error) {
 // Name gives the name of the discovery.
 func (k *staticDiscovery) Name() string { return "static://" + strings.Join(k.Peers, ",") }
 
-func (k *staticDiscovery) Stop() {}
-
-func (k *staticDiscovery) Start(_ string, _ int) (chan string, error) {
+func (k *staticDiscovery) Start(ctx context.Context, nodeID string, nodePort int) (chan string, error) {
 	go func() {
 		for _, peer := range k.Peers {
-			k.discoveryChan <- peer
+			select {
+			case <-ctx.Done():
+				return
+			case k.discoveryChan <- peer:
+			}
 		}
-		//close(k.discoveryChan)
 	}()
 	return k.discoveryChan, nil
 }

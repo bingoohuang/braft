@@ -10,14 +10,10 @@ import (
 
 // Go 开始一个协程
 func Go(wg *sync.WaitGroup, f func()) {
-	if wg != nil {
-		wg.Add(1)
-	}
+	wg.Add(1)
 
 	go func() {
-		if wg != nil {
-			defer wg.Done()
-		}
+		defer wg.Done()
 
 		f()
 	}()
@@ -25,14 +21,10 @@ func Go(wg *sync.WaitGroup, f func()) {
 
 // GoChan 开始一个协程，从 ch 读取数据，调用 f 进行处理
 func GoChan[T any](ctx context.Context, wg *sync.WaitGroup, ch <-chan T, f func(elem T) error) {
-	if wg != nil {
-		wg.Add(1)
-	}
+	wg.Add(1)
 
 	go func() {
-		if wg != nil {
-			defer wg.Done()
-		}
+		defer wg.Done()
 
 		for {
 			select {

@@ -18,7 +18,6 @@ import (
 type kubernetesDiscovery struct {
 	serviceLabels map[string]string
 	discoveryChan chan string
-	stopChan      chan bool
 
 	clientSet *kubernetes.Clientset
 	namespace string
@@ -31,7 +30,6 @@ func NewKubernetesDiscovery(namespace, portName string, serviceLabels map[string
 		serviceLabels: serviceLabels,
 		portName:      portName,
 		discoveryChan: make(chan string),
-		stopChan:      make(chan bool),
 	}
 }
 
@@ -42,7 +40,7 @@ func (k *kubernetesDiscovery) Name() string {
 		"/portName=" + k.portName
 }
 
-func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
+func (k *kubernetesDiscovery) Start(ctx context.Context, nodeID string, nodePort int) (chan string, error) {
 	util.Think(ss.Or(util.Env("K8S_SLEEP"), "15-30s"), "")
 
 	cc, err := rest.InClusterConfig()
@@ -53,24 +51,26 @@ func (k *kubernetesDiscovery) Start(_ string, _ int) (chan string, error) {
 		return nil, err
 	}
 	// do a search at first.
-	k.search(true)
-	go k.discovery()
+	k.search(ctx, true)
+	go k.discovery(ctx)
 	return k.discoveryChan, nil
 }
 
-func (k *kubernetesDiscovery) discovery() {
+func (k *kubernetesDiscovery) discovery(ctx context.Context) {
+	d := time.Duration(randx.IntBetween(1, 6)) * time.Second
+	t := time.NewTicker(d)
+	defer t.Stop()
 	for {
 		select {
-		case <-k.stopChan:
-			k.stopChan <- true
+		case <-ctx.Done():
 			return
-		case <-time.After(time.Duration(randx.IntBetween(1, 6)) * time.Second):
-			k.search(false)
+		case <-t.C:
+			k.search(ctx, false)
 		}
 	}
 }
 
-func (k *kubernetesDiscovery) search(async bool) {
+func (k *kubernetesDiscovery) search(ctx context.Context, async bool) {
 	result, err := k.Search()
 	if err != nil {
 		log.Printf("search k8s error: %v", err)
@@ -78,7 +78,11 @@ func (k *kubernetesDiscovery) search(async bool) {
 
 	f := func() {
 		for _, item := range result {
-			k.discoveryChan <- item
+			select {
+			case <-ctx.Done():
+				return
+			case k.discoveryChan <- item:
+			}
 		}
 	}
 
@@ -138,9 +142,4 @@ func (k *kubernetesDiscovery) findPort(pod core.Pod) (p core.ContainerPort) {
 		}
 	}
 	return p
-}
-
-func (k *kubernetesDiscovery) Stop() {
-	k.stopChan <- true
-	<-k.stopChan
 }

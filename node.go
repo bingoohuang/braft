@@ -33,7 +33,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
-	raftboltdb "github.com/hashicorp/raft-boltdb"
+	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	"github.com/samber/lo"
 	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
@@ -63,13 +63,14 @@ type Node struct {
 	distributor      *fsm.Distributor
 	raftLogSum       *uint64
 
-	addrQueue *util.UniqueQueue
-	notifyCh  chan NotifyEvent
-	addr      string
-	ID        string
-	fns       []ConfigFn
-	RaftID    RaftID
-	stopped   uint32
+	addrQueue  *util.UniqueQueue
+	notifyCh   chan NotifyEvent
+	addr       string
+	ID         string
+	fns        []ConfigFn
+	RaftID     RaftID
+	stopped    uint32
+	GrpcListen net.Listener
 }
 
 // Config is the configuration of the node.
@@ -303,6 +304,8 @@ func (n *Node) start() (err error) {
 	if err != nil {
 		return err
 	}
+
+	n.GrpcListen = grpcListen
 	n.GrpcServer = grpc.NewServer()
 	// register management services
 	n.TransportManager.Register(n.GrpcServer)
@@ -317,14 +320,13 @@ func (n *Node) start() (err error) {
 	logfmt.RegisterLevelKey("[DEBUG]", logrus.DebugLevel)
 
 	n.wg = &sync.WaitGroup{}
+	n.ctx, n.cancelFunc = context.WithCancel(context.Background())
 
 	// discovery method
-	discoveryChan, err := n.Conf.Discovery.Start(n.ID, n.Conf.Dport)
+	discoveryChan, err := n.Conf.Discovery.Start(n.ctx, n.ID, n.Conf.Dport)
 	if err != nil {
 		return err
 	}
-
-	n.ctx, n.cancelFunc = context.WithCancel(context.Background())
 
 	n.goHandleDiscoveredNodes(discoveryChan)
 
@@ -372,7 +374,6 @@ func (n *Node) Stop() {
 		n.Conf.LeaderChange(n, NodeShuttingDown)
 	}
 
-	n.Conf.Discovery.Stop()
 	if err := n.mList.Leave(10 * time.Second); err != nil {
 		log.Printf("E! leave from discovery: %v", err)
 	}
@@ -384,6 +385,9 @@ func (n *Node) Stop() {
 		log.Printf("E! shutdown Raft failed: %v", err)
 	}
 	log.Print("Raft stopped")
+	if err := n.GrpcListen.Close(); err != nil {
+		log.Printf("E! close grpc failed: %v", err)
+	}
 	n.GrpcServer.Stop()
 	log.Print("GrpcServer Server stopped")
 
@@ -492,6 +496,7 @@ func (n *Node) waitLeader(minWait time.Duration) (leaderAddr, leaderID string, e
 		if time.Since(start) >= minWait {
 			log.Printf("stop to wait leader, expired %s >= %s", time.Since(start), minWait)
 			n.Stop()
+			log.Printf("braft node stopped")
 			return "", "", io.EOF
 		}
 
@@ -510,6 +515,8 @@ func (n *Node) processNotify(e NotifyEvent, waitLeader chan NotifyEvent) {
 	}
 
 	select {
+	case <-n.ctx.Done():
+		return
 	case waitLeader <- e:
 		log.Printf("current no leader, to wait list, type: %s, leader: %s, isLeader: %t, node: %s",
 			e.NotifyType, leader, isLeader, codec.Json(e.Node))
@@ -519,8 +526,8 @@ func (n *Node) processNotify(e NotifyEvent, waitLeader chan NotifyEvent) {
 }
 
 func (n *Node) processNotifyAtLeader(isLeader bool, e NotifyEvent) {
-	leader, _ := n.Raft.LeaderWithID()
-	log.Printf("processing type: %s, leader: %s, isLeader: %t, node: %s",
+	leader, _ := n.Leader()
+	log.Printf("processing type: %s, leader: %v, isLeader: %t, node: %s",
 		e.NotifyType, leader, isLeader, codec.Json(e.Node))
 
 	switch e.NotifyType {
@@ -528,6 +535,7 @@ func (n *Node) processNotifyAtLeader(isLeader bool, e NotifyEvent) {
 		n.join(e.Node)
 	case NotifyLeave:
 		n.leave(e.Node)
+	default:
 	}
 }
 
