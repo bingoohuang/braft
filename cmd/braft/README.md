@@ -23,3 +23,9 @@ Usage
 
 1. `BRAFT_DISCOVERY=:15001,:16001 BRAFT_RPORT=15000 braft`
 2. `BRAFT_DISCOVERY=:15001,:16001 BRAFT_RPORT=16000 braft`
+
+防火墙调整规则，模拟脑裂:
+
+1. 从防火墙拒绝对端的访问: `iptables -A INPUT -s 172.16.25.57 -j DROP`
+2. 查询规则: `iptables -L -n --line-numbers`
+3. 删除规则: `iptables -D INPUT 1`

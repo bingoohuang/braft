@@ -20,6 +20,7 @@ import (
 	"github.com/bingoohuang/gg/pkg/v"
 	"github.com/bingoohuang/golog"
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/raft"
 	"github.com/segmentio/ksuid"
 	"github.com/thoas/go-funk"
 )
@@ -31,9 +32,9 @@ func main() {
 
 	node, err := braft.NewNode(
 		braft.WithServices(fsm.NewMemKvService(), fsm.NewDistributeService(dh)),
-		braft.WithLeaderChange(func(n *braft.Node, s braft.NodeState) {
+		braft.WithLeaderChange(func(n *braft.Node, s raft.RaftState) {
 			log.Printf("nodeState: %s", s)
-			if s == braft.NodeLeader {
+			if s == raft.Leader {
 				t.Start(func() {
 					log.Printf("ticker ticker, I'm %s, nodeIds: %v", n.Raft.State(), n.ShortNodeIds())
 				})

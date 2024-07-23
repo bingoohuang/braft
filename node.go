@@ -34,7 +34,6 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
-	"github.com/samber/lo"
 	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
 	"github.com/sqids/sqids-go"
@@ -241,13 +240,17 @@ func (n *Node) createNode() error {
 
 // Start starts the Node and returns a channel that indicates, that the node has been stopped properly
 func (n *Node) Start() (err error) {
-	var exitBool atomic.Bool
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		n.Stop()
-		exitBool.Store(true)
+		go func() {
+			n.Stop()
+		}()
+
+		// 等待10秒，等待 memberlist leave node
+		time.Sleep(10 * time.Second)
+		os.Exit(1)
 	}()
 
 	for {
@@ -256,12 +259,6 @@ func (n *Node) Start() (err error) {
 		}
 
 		n.wait()
-
-		if exitBool.Load() {
-			// 等待10秒，等待 memberlist leave node
-			time.Sleep(10 * time.Second)
-			return fmt.Errorf("cancelled")
-		}
 
 		if err = n.createNode(); err != nil {
 			log.Printf("restart failed: %v", err)
@@ -337,17 +334,16 @@ func (n *Node) start() (err error) {
 		}
 	})
 
-	if n.Conf.LeaderChange != nil {
-		d := util.EnvDuration("BRAFT_LEADER_STEADY", 60*time.Second)
-		delayLeaderChanger := util.NewDelayWorker(n.wg, n.ctx, d, func(state NodeState, t time.Time) {
-			n.Conf.LeaderChange(n, state)
-		})
-		util.GoChan(n.ctx, n.wg, n.Raft.LeaderCh(), func(becameLeader bool) error {
-			log.Printf("becameLeader: %v", becameLeader)
-			delayLeaderChanger.Notify(lo.Ternary(becameLeader, NodeLeader, NodeFollower))
-			return nil
-		})
-	}
+	util.GoChan(n.ctx, n.wg, n.Raft.LeaderCh(), func(becameLeader bool) error {
+		log.Printf("becameLeader: %v", becameLeader)
+
+		n.Conf.LeaderChange(n, n.Raft.State())
+
+		if becameLeader {
+			util.Go(n.wg, n.watchNodesDiff)
+		}
+		return nil
+	})
 
 	n.goDealNotifyEvent()
 	if n.Conf.EnableHTTP {
@@ -369,10 +365,7 @@ func (n *Node) Stop() {
 	}
 
 	log.Print("Stopping Node...")
-
-	if n.Conf.LeaderChange != nil {
-		n.Conf.LeaderChange(n, NodeShuttingDown)
-	}
+	n.cancelFunc()
 
 	if err := n.mList.Leave(10 * time.Second); err != nil {
 		log.Printf("E! leave from discovery: %v", err)
@@ -380,24 +373,31 @@ func (n *Node) Stop() {
 	if err := n.mList.Shutdown(); err != nil {
 		log.Printf("E! shutdown discovery failed: %v", err)
 	}
-	log.Print("Discovery stopped")
-	if err := n.Raft.Shutdown().Error(); err != nil {
-		log.Printf("E! shutdown Raft failed: %v", err)
-	}
-	log.Print("Raft stopped")
+
 	if err := n.GrpcListen.Close(); err != nil {
 		log.Printf("E! close grpc failed: %v", err)
 	}
 	n.GrpcServer.Stop()
 	log.Print("GrpcServer Server stopped")
 
-	n.cancelFunc()
+	log.Print("Discovery stopped")
+
+	go func() {
+		n.Conf.LeaderChange(n, raft.Shutdown)
+
+		if err := n.Raft.Shutdown().Error(); err != nil {
+			log.Printf("E! shutdown Raft failed: %v", err)
+		}
+		log.Print("Raft stopped")
+	}()
 
 	if n.httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := n.httpServer.Shutdown(ctx); err != nil {
-			log.Printf("E! server Shutdown failed: %v", err)
+			log.Printf("E! http server Shutdown failed: %v", err)
+		} else {
+			log.Printf("http server stopped")
 		}
 	}
 }
@@ -636,6 +636,85 @@ func (n *Node) Distribute(bean fsm.Distributable) (any, error) {
 func (n *Node) wait() {
 	n.wg.Wait()
 	log.Print("Node Stopped!")
+}
+
+func (n *Node) watchNodesDiff() {
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-n.ctx.Done():
+			return
+		case <-ticker.C:
+			if !n.IsLeader() {
+				return
+			}
+
+			if n.checkNodesDiff() {
+				n.Stop()
+				return
+			}
+		}
+	}
+}
+
+// 检查当前集群发现的处于稳态的节点，是否与 Raft 集群节点不匹配
+func (n *Node) checkNodesDiff() bool {
+	nodes, err := n.Conf.Discovery.Search()
+	if err != nil {
+		log.Printf("discovery search error: %v", err)
+		return false
+	}
+
+	var raftServerAddrs []string
+	servers := n.GetRaftServers()
+	for _, server := range servers {
+		id, err := UnmarshRaftID(string(server.ID))
+		if err != nil {
+			log.Printf("unmarsh raft id %s error: %v", server.ID, err)
+			continue
+		}
+		ports := util.Pick1(sqids.New()).Decode(id.Sqid) // {RaftPort, Dport, Hport}
+		serverAddr := string(server.Address)
+		if len(ports) >= 3 {
+			host, _, _ := net.SplitHostPort(serverAddr)
+			serverAddr = fmt.Sprintf("%s:%d", host, ports[1])
+		}
+
+		raftServerAddrs = append(raftServerAddrs, serverAddr)
+	}
+	log.Printf("dicovery search: %v, raft servers: %v", nodes, raftServerAddrs)
+
+	// 检查稳态
+	connectableNodes := make(map[string]bool)
+	for _, node := range nodes {
+		if CheckTCP(node) {
+			connectableNodes[node] = true
+		}
+	}
+
+	if len(servers) != len(connectableNodes) {
+		return true
+	}
+
+	for _, raftServerAddr := range raftServerAddrs {
+		if _, ok := connectableNodes[raftServerAddr]; !ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func CheckTCP(ipPort string) bool {
+	c, err := net.DialTimeout("tcp", ipPort, 3*time.Second)
+	if err != nil {
+		return false
+	}
+
+	c.Close()
+	return true
 }
 
 // logger adapters logger to LevelLogger.

@@ -7,6 +7,7 @@ import (
 	"github.com/bingoohuang/braft/fsm"
 	"github.com/bingoohuang/braft/marshal"
 	"github.com/bingoohuang/braft/util"
+	"github.com/hashicorp/raft"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -14,33 +15,8 @@ import (
 // ConfigFn is the function option pattern for the NodeConfig.
 type ConfigFn func(*Config)
 
-// NodeState 节点状态
-type NodeState int
-
-const (
-	// NodeFollower 表示节点为 Follower 状态
-	NodeFollower NodeState = iota
-	// NodeLeader 表示节点为 Leader 状态
-	NodeLeader
-	// NodeShuttingDown 表示节点处于 ShuttingDown 状态
-	NodeShuttingDown
-)
-
-func (n NodeState) String() string {
-	switch n {
-	case NodeFollower:
-		return "NodeFollower"
-	case NodeLeader:
-		return "NodeLeader"
-	case NodeShuttingDown:
-		return "NodeShuttingDown"
-	default:
-		return "Unknown"
-	}
-}
-
 // NodeStateChanger defines the leader change callback func prototype.
-type NodeStateChanger func(n *Node, nodeState NodeState)
+type NodeStateChanger func(n *Node, nodeState raft.RaftState)
 
 // WithLeaderChange specifies the leader change callback.
 func WithLeaderChange(s NodeStateChanger) ConfigFn { return func(c *Config) { c.LeaderChange = s } }
@@ -131,6 +107,9 @@ func createConfig(fns []ConfigFn) (*Config, error) {
 	}
 	if len(conf.Services) == 0 {
 		conf.Services = []fsm.Service{fsm.NewMemKvService()}
+	}
+	if conf.LeaderChange == nil {
+		conf.LeaderChange = func(*Node, raft.RaftState) {}
 	}
 
 	for _, service := range conf.Services {
