@@ -103,7 +103,7 @@ func createConfig(fns []ConfigFn) (*Config, error) {
 		conf.TypeRegister = marshal.NewTypeRegister(marshal.NewMsgPacker())
 	}
 	if conf.Discovery == nil {
-		conf.Discovery = CreateDiscovery(DefaultDiscovery)
+		conf.Discovery = CreateDiscovery(DefaultDiscovery, conf.Dport)
 	}
 	if len(conf.Services) == 0 {
 		conf.Services = []fsm.Service{fsm.NewMemKvService()}

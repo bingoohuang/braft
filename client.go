@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"log"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -82,7 +84,7 @@ func wrapDefers(fns []func() error) func() {
 }
 
 // CreateDiscovery creates a new discovery from the given discovery method.
-func CreateDiscovery(discoveryMethod string) discovery.Discovery {
+func CreateDiscovery(discoveryMethod string, dport int) discovery.Discovery {
 	switch s := discoveryMethod; {
 	case s == "k8s" || strings.HasPrefix(s, "k8s:"):
 		s := ss.If(s == "k8s", "", s)
@@ -124,9 +126,21 @@ func CreateDiscovery(discoveryMethod string) discovery.Discovery {
 				}
 			}
 		}
+		// 在后面填充端口号 ip:{dport}
+		for i, p := range peers {
+			if !checkPortEnd(p) {
+				peers[i] += ":" + strconv.Itoa(dport)
+			}
+		}
 
 		return discovery.NewStaticDiscovery(peers)
 	}
+}
+
+func checkPortEnd(s string) bool {
+	// 正则表达式，匹配以冒号开头后跟1到5位数字的字符串
+	re := regexp.MustCompile(`:\d{1,5}$`)
+	return re.MatchString(s)
 }
 
 var (
