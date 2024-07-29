@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/bingoohuang/braft/pidusage"
@@ -59,13 +58,7 @@ func (s *ClientGrpcServices) GetDetails(_ context.Context, r *proto.GetDetailsRe
 		DiscoveryNodes: discoveryNodes,
 		StartTime:      s.Node.StartTime.Format(time.RFC3339Nano),
 		Duration:       time.Since(s.Node.StartTime).String(),
-		Rss: func() uint64 {
-			var mem syscall.Rusage
-			if err := syscall.Getrusage(syscall.RUSAGE_SELF, &mem); err != nil {
-				log.Printf("E! failed to call syscall.Getrusage, error: %v", err)
-			}
-			return uint64(mem.Maxrss)
-		}(),
+		Rss:            util.Rss(),
 		Pcpu: func() float32 {
 			stat, err := pidusage.GetStat(os.Getpid())
 			if err != nil {
