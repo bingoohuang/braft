@@ -18,6 +18,14 @@ type ConfigFn func(*Config)
 // NodeStateChanger defines the leader change callback func prototype.
 type NodeStateChanger func(n *Node, nodeState raft.RaftState)
 
+// WithShutdownExitCode specifies the program should exit or not when the raft cluster shutdown.
+func WithShutdownExitCode(shutdownExit bool, shutdownExitCode int) ConfigFn {
+	return func(c *Config) {
+		c.ShutdownExit = shutdownExit
+		c.ShutdownExitCode = shutdownExitCode
+	}
+}
+
 // WithLeaderChange specifies the leader change callback.
 func WithLeaderChange(s NodeStateChanger) ConfigFn { return func(c *Config) { c.LeaderChange = s } }
 

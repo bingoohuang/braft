@@ -93,6 +93,10 @@ type Config struct {
 	Hport int
 	// Raft ServiceID
 	ServerID string
+	// ShutdownExit 集群停止时，直接退出，方便 systemctl 重启
+	ShutdownExit bool
+	// ShutdownExitCode 退出时的编码
+	ShutdownExitCode int
 }
 
 // RaftID is the structure of node ID.
@@ -329,19 +333,14 @@ func (n *Node) start() (err error) {
 
 	// serve grpc
 	util.Go(n.wg, func() {
-		if err := n.GrpcServer.Serve(grpcListen); err != nil {
-			log.Printf("E! GrpcServer failed: %v", err)
-		}
+		err := n.GrpcServer.Serve(grpcListen)
+		log.Printf("GrpcServer stopped: %v", err)
 	})
 
 	util.GoChan(n.ctx, n.wg, n.Raft.LeaderCh(), func(becameLeader bool) error {
-		log.Printf("becameLeader: %v", becameLeader)
-
+		log.Printf("becameLeader: %v", n.Raft.State())
 		n.Conf.LeaderChange(n, n.Raft.State())
-
-		if becameLeader {
-			util.Go(n.wg, n.watchNodesDiff)
-		}
+		util.Go(n.wg, n.watchNodesDiff)
 		return nil
 	})
 
@@ -365,40 +364,39 @@ func (n *Node) Stop() {
 	}
 
 	log.Print("Stopping Node...")
+	n.Conf.LeaderChange(n, raft.Shutdown)
 	n.cancelFunc()
 
-	if err := n.mList.Leave(10 * time.Second); err != nil {
-		log.Printf("E! leave from discovery: %v", err)
-	}
-	if err := n.mList.Shutdown(); err != nil {
-		log.Printf("E! shutdown discovery failed: %v", err)
+	if n.Conf.ShutdownExit {
+		go func() {
+			util.Think("5s", "prepare for ShutdownExit")
+			log.Printf("ShutdownExit %d", n.Conf.ShutdownExitCode)
+			os.Exit(n.Conf.ShutdownExitCode)
+		}()
 	}
 
-	if err := n.GrpcListen.Close(); err != nil {
-		log.Printf("E! close grpc failed: %v", err)
-	}
+	err := n.mList.Leave(10 * time.Second)
+	log.Printf("mList leave: %v", err)
+
+	err = n.mList.Shutdown()
+	log.Printf("mList shutdown: %v", err)
+
+	err = n.GrpcListen.Close()
+	log.Printf("GrpcListen close: %v", err)
+
 	n.GrpcServer.Stop()
 	log.Print("GrpcServer Server stopped")
 
-	log.Print("Discovery stopped")
-
 	go func() {
-		n.Conf.LeaderChange(n, raft.Shutdown)
-
-		if err := n.Raft.Shutdown().Error(); err != nil {
-			log.Printf("E! shutdown Raft failed: %v", err)
-		}
-		log.Print("Raft stopped")
+		err := n.Raft.Shutdown().Error()
+		log.Printf("Raft shutdown Raft: %v", err)
 	}()
 
 	if n.httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := n.httpServer.Shutdown(ctx); err != nil {
-			log.Printf("E! http server Shutdown failed: %v", err)
-		} else {
-			log.Printf("http server stopped")
-		}
+		err := n.httpServer.Shutdown(ctx)
+		log.Printf("http server Shutdown: %v", err)
 	}
 }
 
@@ -420,11 +418,9 @@ func (n *Node) goHandleDiscoveredNodes(discoveryChan chan string) {
 		}
 
 		// format of peer should ip:port (the port is for discovery)
-		if _, err := n.mList.Join([]string{peer}); err != nil {
-			log.Printf("E! %s joined memberlist error: %v", peer, err)
-		} else {
-			log.Printf("%s joined memberlist successfully", peer)
-		}
+		log.Printf("start mlist joinn: %v", peer)
+		_, err := n.mList.Join([]string{peer})
+		log.Printf("%s joined memberlist error: %v", peer, err)
 
 		return nil
 	})
@@ -468,7 +464,7 @@ func (n *Node) goDealNotifyEvent() {
 	waitLeader := make(chan NotifyEvent, 100)
 
 	util.GoChan(n.ctx, n.wg, n.notifyCh, func(e NotifyEvent) error {
-		n.processNotify(e, waitLeader)
+		go n.processNotify(e, waitLeader)
 		return nil
 	})
 
