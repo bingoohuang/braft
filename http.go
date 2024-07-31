@@ -126,6 +126,8 @@ type RaftNode struct {
 	RaftPort      int `json:"raftPort"`
 	DiscoveryPort int `json:"discoveryPort"`
 	HttpPort      int `json:"httpPort"`
+
+	NodeIds []string `json:"nodeIds"`
 }
 
 // raftServer tracks the information about a single server in a configuration.
@@ -212,6 +214,8 @@ func (n *Node) GetRaftNodes(raftServers []raft.Server) (nodes []RaftNode) {
 			RaftPort:      int(ports[0]),
 			DiscoveryPort: int(ports[1]),
 			HttpPort:      int(ports[2]),
+
+			NodeIds: rsp.NodeIds,
 		})
 	}
 	return
