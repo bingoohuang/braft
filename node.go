@@ -83,8 +83,7 @@ type Config struct {
 	HTTPConfigFns   []HTTPConfigFn
 	EnableHTTP      bool
 	GrpcDialOptions []grpc.DialOption
-	// Raft 监听IP
-	RaftListenIP string
+
 	// Rport Raft 监听端口值
 	Rport int
 	// Dport Discovery 端口值
@@ -97,6 +96,9 @@ type Config struct {
 	ShutdownExit bool
 	// ShutdownExitCode 退出时的编码
 	ShutdownExitCode int
+
+	// HostIP 当前主机的IP
+	HostIP string
 }
 
 // RaftID is the structure of node ID.
@@ -107,6 +109,13 @@ type RaftID struct {
 	Sqid       string `json:"sqid,omitempty"` // {RaftPort, Dport, Hport}
 	ServerID   string `json:"serverID,omitempty"`
 	ServerAddr string `json:"serverAddr,omitempty"`
+}
+
+func (i RaftID) NodeID() string {
+	if i.ServerID != "" {
+		return i.ServerID
+	}
+	return i.ID
 }
 
 // NewNode returns an BRaft node.
@@ -162,7 +171,7 @@ func (n *Node) createNode() error {
 		Sqid: util.Pick1(util.Pick1(sqids.New()).Encode(
 			[]uint64{uint64(conf.Rport), uint64(conf.Dport), uint64(conf.Hport)})),
 		Hostname: util.Pick1(os.Hostname()),
-		IP:       util.Pick1(goip.MainIP()),
+		IP:       conf.HostIP,
 		ServerID: conf.ServerID,
 	}
 
@@ -198,10 +207,10 @@ func (n *Node) createNode() error {
 	snapshotStore := raft.NewDiscardSnapshotStore()
 
 	// FSM 有限状态机
-	sm := fsm.NewRoutingFSM(raftID.ID, conf.Services, conf.TypeRegister)
+	sm := fsm.NewRoutingFSM(raftID.NodeID(), conf.Services, conf.TypeRegister)
 
 	// default raft config
-	addr := fmt.Sprintf("%s:%d", conf.RaftListenIP, conf.Rport)
+	addr := fmt.Sprintf("%s:%d", conf.HostIP, conf.Rport)
 	// grpc transport, Transport Raft节点之间的通信通道
 	t := transport.New(raft.ServerAddress(addr), conf.GrpcDialOptions)
 
@@ -604,7 +613,7 @@ func (n *Node) RaftApply(request any, timeout time.Duration) (any, error) {
 func (n *Node) ShortNodeIds() (nodeIds []string) {
 	for _, server := range n.GetRaftServers() {
 		rid := ParseRaftID(string(server.ID))
-		nodeIds = append(nodeIds, rid.ID)
+		nodeIds = append(nodeIds, rid.NodeID())
 	}
 
 	sort.Strings(nodeIds)

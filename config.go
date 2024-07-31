@@ -49,6 +49,12 @@ func WithTypeRegister(s *marshal.TypeRegister) ConfigFn {
 // WithEnableHTTP specifies whether to enable the http service.
 func WithEnableHTTP(v bool) ConfigFn { return func(c *Config) { c.EnableHTTP = v } }
 
+func WithHostIP(v string) ConfigFn {
+	return func(c *Config) {
+		c.HostIP = v
+	}
+}
+
 // WithHTTPFns specifies the http service.
 func WithHTTPFns(s ...HTTPConfigFn) ConfigFn {
 	return func(c *Config) {
@@ -99,10 +105,10 @@ func createConfig(fns []ConfigFn) (*Config, error) {
 		GrpcDialOptions: []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		},
-		RaftListenIP: EnvIP,
-		Rport:        EnvRport,
-		Dport:        EnvDport,
-		Hport:        EnvHport,
+		HostIP: EnvIP,
+		Rport:  EnvRport,
+		Dport:  EnvDport,
+		Hport:  EnvHport,
 	}
 	for _, f := range fns {
 		f(conf)

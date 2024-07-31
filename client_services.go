@@ -71,6 +71,7 @@ func (s *ClientGrpcServices) GetDetails(_ context.Context, r *proto.GetDetailsRe
 		Pid:        uint64(os.Getpid()),
 		BizData:    createBizData(s.Node.Conf.BizData),
 		Addr:       s.Node.addrQueue.Get(),
+		NodeIds:    s.Node.ShortNodeIds(),
 	}, nil
 }
 

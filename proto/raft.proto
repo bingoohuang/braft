@@ -29,6 +29,7 @@ message GetDetailsResponse {
   string bizData = 15;
   repeated string addr = 16;
   string leaderID = 17;
+  repeated string nodeIds = 18;
 }
 
 message ApplyRequest {
