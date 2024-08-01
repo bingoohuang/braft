@@ -177,7 +177,7 @@ func (n *Node) ServeDistribute(ctx *gin.Context) {
 	items := bean.GetDistributableItems()
 	dataLen := n.distributor.Distribute(n.ShortNodeIds(), items)
 	log.Printf("ServeDistribute /distribute/%s %d items: %s", key, dataLen, codec.Json(bean))
-	ctx.JSON(200, items)
+	ctx.JSON(200, bean)
 }
 
 // ServeRaft services the raft http api.

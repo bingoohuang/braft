@@ -88,15 +88,15 @@ func (d *DemoPicker) RegisterMarshalTypes(reg *marshal.TypeRegister) {
 }
 
 func (d *DemoPicker) distributeGet2(ctx *gin.Context, n *braft.Node) {
-	var items []DemoItem
-	nodeID, err := n.GetDistribute("demo", &items)
+	var dd DemoDist
+	nodeID, err := n.GetDistribute("demo", &dd)
 	if err != nil {
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
-	dd := funk.Filter(items, func(item DemoItem) bool {
+	dd.Items = funk.Filter(dd.Items, func(item DemoItem) bool {
 		return item.NodeID == nodeID
-	})
+	}).([]DemoItem)
 	ctx.JSON(200, dd)
 }
 
