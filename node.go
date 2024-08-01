@@ -70,6 +70,8 @@ type Node struct {
 	RaftID     RaftID
 	stopped    uint32
 	GrpcListen net.Listener
+
+	DistributeCache sync.Map // map[string]fsm.Distributable
 }
 
 // Config is the configuration of the node.
@@ -629,8 +631,35 @@ func ParseRaftID(s string) (rid RaftID) {
 	return rid
 }
 
+type DistributeOption struct {
+	Key string // http /distribute/:key
+}
+
+type DistributeOptionFunc func(*DistributeOption)
+
+func WithKey(key string) DistributeOptionFunc {
+	return func(opt *DistributeOption) {
+		opt.Key = key
+	}
+}
+
 // Distribute distributes the given bean to all the nodes in the cluster.
-func (n *Node) Distribute(bean fsm.Distributable) (any, error) {
+func (n *Node) Distribute(bean fsm.Distributable, fns ...DistributeOptionFunc) (any, error) {
+	var opt DistributeOption
+	for _, fn := range fns {
+		fn(&opt)
+	}
+
+	if opt.Key != "" {
+		if !n.IsLeader() {
+			return nil, ErrNoLeader
+		}
+
+		// 等待 HTTP GET /distribute/:key 取值
+		n.DistributeCache.Store(opt.Key, bean)
+		return nil, nil
+	}
+
 	items := bean.GetDistributableItems()
 	dataLen := n.distributor.Distribute(n.ShortNodeIds(), items)
 

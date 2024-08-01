@@ -45,6 +45,7 @@ func main() {
 		braft.WithHTTPFns(
 			braft.WithHandler(http.MethodPost, "/distribute", dh.distributePost),
 			braft.WithHandler(http.MethodGet, "/distribute", dh.distributeGet),
+			braft.WithHandler(http.MethodGet, "/distribute2", dh.distributeGet2),
 		))
 	if err != nil {
 		log.Fatalf("failed to new node, error: %v", err)
@@ -86,13 +87,26 @@ func (d *DemoPicker) RegisterMarshalTypes(reg *marshal.TypeRegister) {
 	reg.RegisterType(reflect.TypeOf(DemoDist{}))
 }
 
+func (d *DemoPicker) distributeGet2(ctx *gin.Context, n *braft.Node) {
+	var items []DemoItem
+	nodeID, err := n.GetDistribute("demo", &items)
+	if err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	dd := funk.Filter(items, func(item DemoItem) bool {
+		return item.NodeID == nodeID
+	})
+	ctx.JSON(200, dd)
+}
+
 func (d *DemoPicker) distributeGet(ctx *gin.Context, _ *braft.Node) {
 	ctx.JSON(http.StatusOK, d.DD)
 }
 
 func (d *DemoPicker) distributePost(ctx *gin.Context, n *braft.Node) {
 	dd := &DemoDist{Items: makeRandItems(ctx.Query("n")), Common: ksuid.New().String()}
-	if result, err := n.Distribute(dd); err != nil {
+	if result, err := n.Distribute(dd, braft.WithKey("demo")); err != nil {
 		ctx.JSON(http.StatusInternalServerError, err.Error())
 	} else {
 		ctx.JSON(http.StatusOK, result)

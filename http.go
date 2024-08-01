@@ -9,6 +9,7 @@ import (
 
 	"github.com/bingoohuang/braft/fsm"
 	"github.com/bingoohuang/braft/util"
+	"github.com/bingoohuang/gg/pkg/codec"
 	"github.com/bingoohuang/gg/pkg/fn"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/gg/pkg/v"
@@ -16,6 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
+	"github.com/imroc/req/v3"
 	"github.com/samber/lo"
 	"github.com/sqids/sqids-go"
 )
@@ -59,6 +61,7 @@ func (n *Node) runHTTP(fs ...HTTPConfigFn) {
 	r := gin.New()
 	r.Use(ginlogrus.Logger(nil, true), gin.Recovery())
 	r.GET("/raft", n.ServeRaft)
+	r.GET("/distribute/:key", n.ServeDistribute)
 
 	if c.EnableKv {
 		n.RegisterServeKV(r, "/kv")
@@ -138,6 +141,43 @@ type raftServer struct {
 	ID raft.ServerID `json:"id"`
 	// Address is its network address that a transport can contact.
 	Address raft.ServerAddress `json:"address"`
+}
+
+var httpClient = req.C() // Use C() to create a client.
+
+func (n *Node) GetDistribute(key string, result any) (nodeID string, err error) {
+	r, err := n.Leader()
+	if err != nil {
+		return "", err
+	}
+
+	ports := util.Pick1(sqids.New()).Decode(r.Sqid)
+	httpPort := int(ports[2])
+	addr := fmt.Sprintf("http://%s:%d/distribute/%s", r.IP, httpPort, key)
+	if _, err := httpClient.R().SetSuccessResult(result).Get(addr); err != nil {
+		return "", err
+	}
+
+	return n.RaftID.NodeID(), nil
+}
+func (n *Node) ServeDistribute(ctx *gin.Context) {
+	key := ctx.Param("key")
+	value, ok := n.DistributeCache.Load(key)
+	if !ok {
+		ctx.AbortWithStatus(410)
+		return
+	}
+
+	bean, ok := value.(fsm.Distributable)
+	if !ok {
+		ctx.AbortWithStatus(411)
+		return
+	}
+
+	items := bean.GetDistributableItems()
+	dataLen := n.distributor.Distribute(n.ShortNodeIds(), items)
+	log.Printf("ServeDistribute /distribute/%s %d items: %s", key, dataLen, codec.Json(bean))
+	ctx.JSON(200, items)
 }
 
 // ServeRaft services the raft http api.
