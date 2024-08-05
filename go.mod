@@ -30,12 +30,14 @@ require (
 	k8s.io/client-go v0.30.2
 )
 
-replace github.com/armon/go-metrics => github.com/hashicorp/go-metrics v0.5.3
+replace (
+	github.com/armon/go-metrics => github.com/hashicorp/go-metrics v0.5.3
+	github.com/hashicorp/raft-boltdb/v2 => github.com/bingoohuang/raft-boltdb/v2 v2.0.0-20240805053922-e70017c578e3
+)
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/armon/go-metrics v0.5.3 // indirect
-	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/bytedance/sonic v1.11.9 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect

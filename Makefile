@@ -129,7 +129,8 @@ mac-arm: init
 	GOOS=darwin GOARCH=arm64 ${goinstall}
 	# upx --best --lzma ${gobin}/darwin_arm64/${app}*
 	ls -lh  ${gobin}/darwin_arm64/${app}*
-
+mips: init
+	GOOS=linux GOARCH=mips64le ${goinstall}
 upx:
 	ls -lh ${gobin}/${app}*
 	upx ${gobin}/${app}*
