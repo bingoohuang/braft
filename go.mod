@@ -15,12 +15,12 @@ require (
 	github.com/hashicorp/raft-boltdb/v2 v2.3.0
 	github.com/imroc/req/v3 v3.43.7
 	github.com/samber/lo v1.46.0
-	github.com/segmentio/ksuid v1.0.4
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.19.0
 	github.com/sqids/sqids-go v0.4.1
 	github.com/stretchr/testify v1.9.0
 	github.com/thoas/go-funk v0.9.3
+	github.com/vishal-bihani/go-tsid v1.0.4
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	go.uber.org/multierr v1.11.0
 	google.golang.org/grpc v1.65.0
@@ -98,6 +98,7 @@ require (
 	github.com/sagikazarmark/locafero v0.6.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
+	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect

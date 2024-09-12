@@ -18,11 +18,10 @@ import (
 	"github.com/bingoohuang/gg/pkg/randx"
 	"github.com/bingoohuang/gg/pkg/sigx"
 	"github.com/bingoohuang/gg/pkg/v"
-	"github.com/bingoohuang/golog"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/raft"
-	"github.com/segmentio/ksuid"
 	"github.com/thoas/go-funk"
+	"github.com/vishal-bihani/go-tsid"
 )
 
 func main() {
@@ -105,7 +104,7 @@ func (d *DemoPicker) distributeGet(ctx *gin.Context, _ *braft.Node) {
 }
 
 func (d *DemoPicker) distributePost(ctx *gin.Context, n *braft.Node) {
-	dd := &DemoDist{Items: makeRandItems(ctx.Query("n")), Common: ksuid.New().String()}
+	dd := &DemoDist{Items: makeRandItems(ctx.Query("n")), Common: tsid.Fast().ToString()}
 	if result, err := n.Distribute(dd, braft.WithKey("demo")); err != nil {
 		ctx.JSON(http.StatusInternalServerError, err.Error())
 	} else {
@@ -128,8 +127,6 @@ func makeRandItems(q string) (ret []DemoItem) {
 
 func init() {
 	flagparse.Parse(&arg)
-
-	golog.Setup()
 
 	// 注册性能采集信号，用法:
 	// 第一步，通知开始采集：touch jj.cpu; kill -USR1 `pidof dsvs2`;

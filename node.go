@@ -34,9 +34,9 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
-	"github.com/segmentio/ksuid"
 	"github.com/sirupsen/logrus"
 	"github.com/sqids/sqids-go"
+	"github.com/vishal-bihani/go-tsid"
 	"github.com/vmihailenco/msgpack/v5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -169,7 +169,7 @@ func (n *Node) createNode() error {
 	log.Printf("node data dir: %s", conf.DataDir)
 
 	raftID := RaftID{
-		ID: ksuid.New().String(),
+		ID: tsid.Fast().ToString(),
 		Sqid: util.Pick1(util.Pick1(sqids.New()).Encode(
 			[]uint64{uint64(conf.Rport), uint64(conf.Dport), uint64(conf.Hport)})),
 		Hostname: util.Pick1(os.Hostname()),
